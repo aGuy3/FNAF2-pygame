@@ -22,6 +22,12 @@ musicBox=pygame.sprite.Sprite()#sprite for musicbox timer on PRISECOUNTER camera
 monitor=pygame.sprite.Sprite()#sprite for monitor closing/opening when opening cameras
 white=pygame.sprite.Sprite()
 flashlight=pygame.sprite.Sprite()
+
+TB=pygame.sprite.Sprite() #Toy bonnie
+TB.ai=5 #ai level
+TB.pos='SHOWSTAGE' #current location
+TB.move=False #if movechance alows it to move
+
 #OFFICE ATTRIBUTES
 office.side='NONE' #Which was the camera is turning(helps keeps objects in sync when moving)
 office.light='NONE' #Current light that is on , only one can be on at a time. The states it can be are 'NONE' , 'LEFT' , 'RIGHT' , 'FRONT'
@@ -89,6 +95,8 @@ def syncMove(sprite):
         sprite.dx=25
     elif office.side=='NONE':
         sprite.dx=0
+        
+
 def drawOffice():
     
     #changes office state / sprite depending on which lights are on
@@ -367,50 +375,50 @@ def onMousePress(x, y):
     
     #Turns office lights on depending on where you click
     if player.maskOn==False:
-        if x <= 400 and y >=400 and y<=1000:
+        if x <= WIDTH/4.8 and y >=HEIGHT/2.7 and y<=HEIGHT/1.08:
             office.light='LEFT'
-        elif x >=1520 and y >=400 and y<=1000:
+        elif x >=WIDTH/1.263 and y >=HEIGHT/2.7 and y<=HEIGHT/1.08:
             office.light='RIGHT'
-        elif x>=650 and x<=1300:
+        elif x>=WIDTH/2.953 and x<=WIDTH/1.476:
             office.light='FRONT'
             
     #changes current camera selected when cams up
     if player.camsUp:       
-        if x>=1100 and x<=1202 and y>=735 and y<=803:
+        if x>=WIDTH/1.745 and x<=WIDTH/1.597 and y>=HEIGHT/1.469 and y<=HEIGHT/1.344:
             player.currentCam='PARTYROOM1'
             white.ani=True
-        elif x>=1340 and x<=1442 and y>=735 and y<=803:
+        elif x>=WIDTH/1.432 and x<=WIDTH/1.3314 and y>=HEIGHT/1.469 and y<=HEIGHT/1.344:
             player.currentCam='PARTYROOM2'
             white.ani=True
 
-        elif x>=1100 and x<=1202 and y>=620 and y<=688:
+        elif x>=WIDTH/1.745 and x<=WIDTH/1.59 and y>=HEIGHT/1.741 and y<=HEIGHT/1.569:
             player.currentCam='PARTYROOM3'
             white.ani=True    
-        elif x>=1340 and x<=1442 and y>=620 and y<=688:
+        elif x>=WIDTH/1.432 and x<=WIDTH/1.331 and y>=HEIGHT/1.741 and y<=HEIGHT/1.569:
             player.currentCam='PARTYROOM4'
             white.ani=True
-        elif x>=1110 and x<=1212 and y>=885 and y<=953:
+        elif x>=WIDTH/1.729 and x<=WIDTH/1.584 and y>=HEIGHT/1.22 and y<=HEIGHT/1.133:
             player.currentCam='LEFTVENT'
             white.ani=True
-        elif x>=1330 and x<=1432 and y>=885 and y<=953:
+        elif x>=WIDTH/1.44 and x<=WIDTH/1.34 and y>=HEIGHT/1.22 and y<=HEIGHT/1.133:
             player.currentCam='RIGHTVENT'
             white.ani=True
-        elif x>=1380 and x<=1482 and y>=520 and y<=588:
+        elif x>=WIDTH/1.39 and x<=WIDTH/1.295 and y>=HEIGHT/2.076 and y<=HEIGHT/1.836:
             player.currentCam='MAINHALL'
             white.ani=True
-        elif x>=1100 and x<=1202 and y>=500 and y<=568:
+        elif x>=WIDTH/1.745 and x<=WIDTH/1.59 and y>=HEIGHT/2.16 and y<=HEIGHT/1.901:
             player.currentCam='P&S'
             white.ani=True
-        elif x>=1690 and x<=1792 and y>=455 and y<=523:
+        elif x>=WIDTH/1.136 and x<=WIDTH/1.07 and y>=HEIGHT/2.37 and y<=HEIGHT/2.065:
             player.currentCam='SHOWSTAGE'
             white.ani=True
-        elif x>=1540 and x<=1642 and y>=655 and y<=723:
+        elif x>=WIDTH/1.24 and x<=WIDTH/1.169 and y>=HEIGHT/1.648 and y<=HEIGHT/1.493:
             player.currentCam='GAMEAREA'
             white.ani=True
-        elif x>=1750 and x<=1852 and y>=560 and y<=628:
+        elif x>=WIDTH/1.09 and x<=WIDTH/1.036 and y>=HEIGHT/1.928 and y<=HEIGHT/1.719:
             player.currentCam='PRISECOUNTER'
             white.ani=True
-        elif x>=1710 and x<=1812 and y>=745 and y<=813:
+        elif x>=WIDTH/1.122 and x<=WIDTH/1.059 and y>=HEIGHT/1.449 and y<=HEIGHT/1.328:
             player.currentCam='KIDSCOVE'
             white.ani=True
 def onMouseRelease(x, y):
@@ -430,13 +438,13 @@ def onMouseMove(x, y):
         
         #For use of the mask button
     if player.camsUp==False:
-        if (x >=10 and x<990 and y>=910 and y<=1030)==False:
+        if (x >=WIDTH/192 and x<WIDTH/1.939 and y>=HEIGHT/1.186 and y<=HEIGHT/1.048)==False:
             if player.maskOn==False:
                 player.C=0
             elif player.maskOn==True:
                 player.C=2
             
-        if x >=50 and x<950 and y>=950 and y<=990:
+        if x >=WIDTH/38.4 and x<WIDTH/2.02 and y>=HEIGHT/1.136 and y<=HEIGHT/1.09090909:
             if player.C==0:
                 player.maskOn=True
             elif player.C==2:
@@ -444,13 +452,13 @@ def onMouseMove(x, y):
                 
         #For use of the cam button
     if player.maskOn==False:
-        if (x >=970 and x<1870 and y>=910 and y<=1030)==False:
+        if (x >=WIDTH/1.979 and x<WIDTH/1.026 and y>=HEIGHT/1.186 and y<=HEIGHT/1.048)==False:
             if player.camsUp==False:
                 player.C2=0
             elif player.camsUp==True:
                 player.C2=2
             
-        if x >=1010 and x<1910 and y>=950 and y<=990:
+        if x >=WIDTH/1.900 and x<WIDTH/1.00523 and y>=HEIGHT/1.136 and y<=HEIGHT/1.09090909:
             if player.C2==0:
                 player.camsUp=True
             elif player.C2==2:
@@ -470,7 +478,11 @@ def onKeyRelease(key):
         office.light='NONE'
     if key == pygame.K_SPACE:
         cam.flash=False
-        
+def ToyBonieAi():
+    
+    pass
+
+
 def setupOffice():
     
     office.image = officeImages['ONN']
@@ -595,7 +607,7 @@ def setupCams():
     cam.rect=cam.image.get_rect()
     cam.rect.x=0
     cam.rect.y=0
-    cam.dx=4
+    cam.dx=3
     
     textCam.image=camUIImages['TEXT-SHOWSTAGE']
     textCam.rect=textCam.image.get_rect()
@@ -1152,7 +1164,7 @@ def mainloop():
                 onKeyPress(event.key)
             elif event.type == pygame.KEYUP:
                 onKeyRelease(event.key)
-        
+        clock.tick(FPS)
 
 
 pygame.init()
@@ -1178,3 +1190,4 @@ setupOffice()
 setupOfficeInts()
 setupCams()
 mainloop()
+
