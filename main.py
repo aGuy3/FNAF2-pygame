@@ -24,7 +24,7 @@ white=pygame.sprite.Sprite()
 flashlight=pygame.sprite.Sprite()
 
 TB=pygame.sprite.Sprite() #Toy bonnie
-TB.ai=5 #ai level
+TB.ai=14 #ai level
 TB.pos='SHOWSTAGE' #current location
 TB.move=False #if movechance alows it to move
 
@@ -33,10 +33,12 @@ office.side='NONE' #Which was the camera is turning(helps keeps objects in sync 
 office.light='NONE' #Current light that is on , only one can be on at a time. The states it can be are 'NONE' , 'LEFT' , 'RIGHT' , 'FRONT'
 office.deskFrame=0 #Frame number for desk animation
 office.maskFrame=0 #Frame number for mask animation
-
+office.inside=False #if an animatronic is inside the office , helps with use of mask and killing of the player
 #CAMERA ATRRIBUTES
 cam.move='LEFT' #which way the camera is moving
 cam.flash=False #if the flashlight is on in cameras
+cam.moveTimer=0 #timer for the movement of animatronics
+
 static.frame=0 #Frame number for static animation
 monitor.frame=0 #Frame number for camera animation
 white.frame=0 #Frame number for glitch when changing camreas
@@ -58,7 +60,30 @@ def update():
     syncMove(desk2)
     syncMove(desk3)
     syncMove(desk4)
+    ToyBonnieAi()
 def updateOffice():
+    
+    #Code for bonnie in office 
+    blackscreen.image.set_alpha(blackscreen.opacity)
+    toybonnie.rect.x-=toybonnie.dx
+    if office.inside:
+        toybonnie.dx=10
+        chance=random.randint(1,4)
+        if chance==2:
+            blackscreen.opacity=0
+        else:
+            blackscreen.opacity=random.randint(200,255)
+        if toybonnie.rect.x<3:
+            blackscreen.opacity=255
+            TB.pos='SHOWSTAGE'
+            office.inside=False
+    if toybonnie.rect.x<0:
+        if blackscreen.opacity>=0:
+            blackscreen.opacity-=2
+        if blackscreen.opacity<=0:
+            toybonnie.rect.x=WIDTH/1.3714
+            toybonnie.dx=0
+            
     office.rect.x+=office.dx
     drawMaskAnimation()
     drawCameraAnimation()
@@ -109,7 +134,11 @@ def drawOffice():
         screen.blit(leftOn.image, leftOn.rect)
         screen.blit(rightOff.image,rightOff.rect)
     elif office.light=='RIGHT':
-        office.image=officeImages['ORN']
+        if TB.pos!='OFFICE':
+            office.image=officeImages['ORN']
+        else:
+            office.image=officeImages['OR_T-BONNIE1']
+        
         screen.blit(leftOff.image, leftOff.rect)
         screen.blit(rightOn.image,rightOn.rect)
     elif office.light=='FRONT':
@@ -200,6 +229,7 @@ def drawWhiteAnimation():
     if white.frame==5:
         white.image=overlayImages['WHITE5']
 def updateCams():
+    cam.moveTimer+=1
     static.frame+=1
     if static.frame>6:
         static.frame=0
@@ -226,12 +256,19 @@ def updateCams():
 def drawCams():
 
     if player.currentCam=='SHOWSTAGE':
-        cam.image=camImages['SHOWSTAGE-FULL/N']
+        if TB.pos=='SHOWSTAGE':
+            cam.image=camImages['SHOWSTAGE-FULL/N']
+            if cam.flash:
+                cam.image=camImages['SHOWSTAGE-FULL/L']
+        else:
+            cam.image=camImages['SHOWSTAGE-F&C/N']
+            if cam.flash:
+                cam.image=camImages['SHOWSTAGE-F&C/L']
+        
         textCam.image=camUIImages['TEXT-SHOWSTAGE']
         camGbox.rect.x=cambox9.rect.x
         camGbox.rect.y=cambox9.rect.y
-        if cam.flash:
-            cam.image=camImages['SHOWSTAGE-FULL/L']
+            
     elif player.currentCam=='GAMEAREA':
         cam.image=camImages['GAMEAREA-BB/N']
         textCam.image=camUIImages['TEXT-GAMEAREA']
@@ -274,27 +311,42 @@ def drawCams():
         camGbox.rect.y=cambox1.rect.y
         if cam.flash:
             cam.image=camImages['PARTYROOM1-EMPTY/L']
+            
     elif player.currentCam=='PARTYROOM2':
         cam.image=camImages['PARTYROOM2-EMPTY/N']
         textCam.image=camUIImages['TEXT-PARTYROOM2']
         camGbox.rect.x=cambox2.rect.x
         camGbox.rect.y=cambox2.rect.y
         if cam.flash:
-            cam.image=camImages['PARTYROOM2-EMPTY/L']
+            if TB.pos!='PARTYROOM2':
+                cam.image=camImages['PARTYROOM2-EMPTY/L']
+            else:
+                cam.image=camImages['PARTYROOM2-TB/L']
+            
     elif player.currentCam=='PARTYROOM3':
         cam.image=camImages['PARTYROOM3-EMPTY/N']
         textCam.image=camUIImages['TEXT-PARTYROOM3']
         camGbox.rect.x=cambox3.rect.x
         camGbox.rect.y=cambox3.rect.y
         if cam.flash:
-            cam.image=camImages['PARTYROOM3-EMPTY/L']
+            if TB.pos!='PARTYROOM3':
+                cam.image=camImages['PARTYROOM3-EMPTY/L']
+            else:
+                cam.image=camImages['PARTYROOM3-TB/L']
+            
     elif player.currentCam=='PARTYROOM4':
-        cam.image=camImages['PARTYROOM4-EMPTY/N']
+        if TB.pos!='PARTYROOM4':
+            cam.image=camImages['PARTYROOM4-EMPTY/N']
+            if cam.flash:
+                cam.image=camImages['PARTYROOM4-EMPTY/L']
+        else:
+            cam.image=camImages['PARTYROOM4-TB/N']
+            if cam.flash:
+                cam.image=camImages['PARTYROOM4-TB/L']
         textCam.image=camUIImages['TEXT-PARTYROOM4']
         camGbox.rect.x=cambox4.rect.x
         camGbox.rect.y=cambox4.rect.y
-        if cam.flash:
-            cam.image=camImages['PARTYROOM4-EMPTY/L']
+        
     elif player.currentCam=='LEFTVENT':
         cam.image=camImages['LEFTVENT-EMPTY/N']
         textCam.image=camUIImages['TEXT-LEFTAIRVENT']
@@ -308,7 +360,10 @@ def drawCams():
         camGbox.rect.x=cambox6.rect.x
         camGbox.rect.y=cambox6.rect.y
         if cam.flash:
-            cam.image=camImages['RIGHTVENT-EMPTY/L']
+            if TB.pos!='RIGHTVENT':
+                cam.image=camImages['RIGHTVENT-EMPTY/L']
+            else:
+                cam.image=camImages['RIGHTVENT-TB/L']
     
 def draw():
     screen.fill(BGCOLOR)
@@ -323,6 +378,8 @@ def draw():
 #draws UI
     screen.blit(maskButton.image,maskButton.rect)
     screen.blit(monitor.image,monitor.rect)
+    if office.inside:
+        screen.blit(toybonnie.image,toybonnie.rect)
     if player.camsUp == True and monitor.frame>=11:
         screen.blit(cam.image,cam.rect)
         screen.blit(static.image,static.rect)
@@ -367,6 +424,7 @@ def draw():
     screen.blit(flashlight.image,flashlight.rect)
     screen.blit(flashlightText.image,flashlightText.rect)
     screen.blit(white.image,white.rect)
+    screen.blit(blackscreen.image,blackscreen.rect)
     screen.blit(mask.image,mask.rect)
     pygame.display.update()
     
@@ -478,11 +536,36 @@ def onKeyRelease(key):
         office.light='NONE'
     if key == pygame.K_SPACE:
         cam.flash=False
-def ToyBonieAi():
+def ToyBonnieAi():
     
-    pass
-
-
+    if(cam.moveTimer>=300):
+        mChance=random.randint(1,20)
+        if(TB.ai>=mChance):
+            TB.move=True
+        else:
+            TB.move=False
+        cam.moveTimer=0
+        
+    if TB.move:
+        if TB.pos=='SHOWSTAGE':
+            TB.pos='PARTYROOM3'
+            TB.move=False
+        elif TB.pos=='PARTYROOM3':
+            TB.pos='PARTYROOM4'
+            TB.move=False
+        elif TB.pos=='PARTYROOM4':
+            TB.pos='PARTYROOM2'
+            TB.move=False
+        elif TB.pos=='PARTYROOM2':
+            TB.pos='RIGHTVENT'
+            TB.move=False
+        elif TB.pos=='RIGHTVENT':
+            TB.pos='OFFICE'
+            TB.move=False
+        elif TB.pos=='OFFICE':
+            TB.POS='IN-OFFICE'
+            office.inside=True
+            TB.move=False
 def setupOffice():
     
     office.image = officeImages['ONN']
@@ -491,7 +574,7 @@ def setupOffice():
     office.rect.x = 0
     office.dx=0
 def setupOfficeInts():
-    global leftOff ,leftOn, rightOff , rightOn , maskButton , camButton ,nightText , amText , flashlightText, mask1 , mask2 , mask3 , mask4 , mask5 , mask6 , mask7 , mask8 , mask9 ,mask10 ,desk1 , desk2 , desk3 , desk4
+    global leftOff ,leftOn, rightOff , rightOn ,toybonnie ,blackscreen, maskButton , camButton ,nightText , amText , flashlightText, mask1 , mask2 , mask3 , mask4 , mask5 , mask6 , mask7 , mask8 , mask9 ,mask10 ,desk1 , desk2 , desk3 , desk4
     
     #light buttons
     leftOff=pygame.sprite.Sprite(officeInts)
@@ -572,6 +655,23 @@ def setupOfficeInts():
     monitor.rect=monitor.image.get_rect()
     monitor.rect.x=0
     monitor.rect.y=HEIGHT/-7.2
+    
+    #Toy bonnie cutout
+    toybonnie=pygame.sprite.Sprite(officeInts)
+    toybonnie.image=animatronicImages['ANIM-TB/OFFICE']
+    toybonnie.rect=toybonnie.image.get_rect()
+    toybonnie.rect.x=WIDTH/1.3714
+    toybonnie.rect.y=HEIGHT/-21.6
+    toybonnie.dx=0
+    
+    blackscreen=pygame.sprite.Sprite(officeInts)
+    blackscreen.image=animatronicImages['ANIM-BLACKSCREEN']
+    blackscreen.rect=blackscreen.image.get_rect()
+    blackscreen.rect.x=0
+    blackscreen.rect.y=0
+    blackscreen.opacity=0 
+    blackscreen.image.set_alpha(blackscreen.opacity)
+    
     
     desk1=pygame.sprite.Sprite(officeDesks)
     desk1.image=officeDeskImages['DESK-F1']
@@ -836,12 +936,12 @@ def loadOffice():
     officeImages['OF_T-FREDDY1'] = pygame.transform.scale(sheet.image_at((4808,772,1600,768)), (WIDTH*1.1718, HEIGHT))
     officeImages['OF_T-FREDDY2'] = pygame.transform.scale(sheet.image_at((6410,772,1600,768)), (WIDTH*1.1718, HEIGHT))
     #TOY BONNIE
-    officeImages['OR_T-BONNIE1'] = pygame.transform.scale(sheet.image_at((2,722,1600,768)), (WIDTH*1.1718, HEIGHT))
+    officeImages['OR_T-BONNIE1'] = pygame.transform.scale(sheet.image_at((2,772,1600,768)), (WIDTH*1.1718, HEIGHT))
     #TOY CHICA
-    officeImages['OF_T-CHICA1'] = pygame.transform.scale(sheet.image_at((1604,722,1600,768)), (WIDTH*1.1718, HEIGHT))
+    officeImages['OF_T-CHICA1'] = pygame.transform.scale(sheet.image_at((1604,772,1600,768)), (WIDTH*1.1718, HEIGHT))
     officeImages['OL_T-CHICA2'] = pygame.transform.scale(sheet.image_at((1604,2,1600,768)), (WIDTH*1.1718, HEIGHT))
     #MANGLE
-    officeImages['OF_MANGLE1'] = pygame.transform.scale(sheet.image_at((3206,722,1600,768)), (WIDTH*1.1718, HEIGHT))
+    officeImages['OF_MANGLE1'] = pygame.transform.scale(sheet.image_at((3206,772,1600,768)), (WIDTH*1.1718, HEIGHT))
     officeImages['OR_MANGLE2'] = pygame.transform.scale(sheet.image_at((8012,1542,1600,768)), (WIDTH*1.1718, HEIGHT))
     #BALOON BOY
     officeImages['OL_B-BOY'] = pygame.transform.scale(sheet.image_at((6410,1542,1600,768)), (WIDTH*1.1718, HEIGHT))
@@ -1144,6 +1244,13 @@ def loadOverlays():
     overlayImages['WHITE4']=pygame.transform.scale(sheet.image_at((3076,1,1024,768),colorkey =(10,10,0)), (WIDTH,HEIGHT))
     overlayImages['WHITE5']=pygame.transform.scale(sheet.image_at((4101,1,1024,768),colorkey =(10,10,0)), (WIDTH,HEIGHT))
     
+def loadToyBonnie():
+    global animatronicImages
+    sheet=Spritesheet('ToyBonnie-SS.png')
+    
+    animatronicImages={}
+    animatronicImages['ANIM-TB/OFFICE']=pygame.transform.scale(sheet.image_at((1026,4615,645,895), colorkey =(10,10,0)), (WIDTH/2.105,HEIGHT/.853))
+    animatronicImages['ANIM-BLACKSCREEN']=pygame.transform.scale(sheet.image_at((1265,5168,1,1), colorkey =(10,10,0)), (WIDTH,HEIGHT))
 def mainloop():
     running = True
     clock = pygame.time.Clock()
@@ -1186,6 +1293,7 @@ loadVentCams()
 loadCamUI()
 loadTitleScreen()
 loadOverlays()
+loadToyBonnie()
 setupOffice()
 setupOfficeInts()
 setupCams()
