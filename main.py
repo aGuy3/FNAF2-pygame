@@ -24,7 +24,7 @@ white=pygame.sprite.Sprite()
 flashlight=pygame.sprite.Sprite()
 
 TB=pygame.sprite.Sprite() #Toy bonnie
-TB.ai=14 #ai level
+TB.ai=4 #ai level
 TB.pos='SHOWSTAGE' #current location
 TB.move=False #if movechance alows it to move
 
@@ -373,13 +373,13 @@ def draw():
     screen.blit(office.image,office.rect)
     drawOffice()
     drawFanAnimation()
-    
     drawCams()
+    if office.inside:
+        screen.blit(toybonnie.image,toybonnie.rect)
 #draws UI
     screen.blit(maskButton.image,maskButton.rect)
     screen.blit(monitor.image,monitor.rect)
-    if office.inside:
-        screen.blit(toybonnie.image,toybonnie.rect)
+    screen.blit(blackscreen.image,blackscreen.rect)
     if player.camsUp == True and monitor.frame>=11:
         screen.blit(cam.image,cam.rect)
         screen.blit(static.image,static.rect)
@@ -415,7 +415,6 @@ def draw():
             screen.blit(textWindUp.image,textWindUp.rect)
             screen.blit(textClick.image,textClick.rect)
             screen.blit(musicBox.image,musicBox.rect)
-
         screen.blit(camDot.image,camDot.rect)
         screen.blit(camOutline.image,camOutline.rect)
     screen.blit(camButton.image,camButton.rect)
@@ -424,7 +423,6 @@ def draw():
     screen.blit(flashlight.image,flashlight.rect)
     screen.blit(flashlightText.image,flashlightText.rect)
     screen.blit(white.image,white.rect)
-    screen.blit(blackscreen.image,blackscreen.rect)
     screen.blit(mask.image,mask.rect)
     pygame.display.update()
     
@@ -988,15 +986,15 @@ def loadOfficeInteractives():
     officeIntImages['FLASHLIGHT-4']=pygame.transform.scale(sheet.image_at((10754,787,100,50), colorkey =(0,0,0)), (WIDTH/12.8,HEIGHT/18))
     officeIntImages['FLASHLIGHT-5']=pygame.transform.scale(sheet.image_at((10855,787,100,50), colorkey =(0,0,0)), (WIDTH/12.8,HEIGHT/18))#completely depleted battery
     #Mask frames
-    officeIntImages['MASK-F1']=pygame.transform.scale(sheet.image_at((1,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F2']=pygame.transform.scale(sheet.image_at((1026,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F3']=pygame.transform.scale(sheet.image_at((2051,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F4']=pygame.transform.scale(sheet.image_at((3076,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F5']=pygame.transform.scale(sheet.image_at((4101,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F6']=pygame.transform.scale(sheet.image_at((5126,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F7']=pygame.transform.scale(sheet.image_at((6151,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F8']=pygame.transform.scale(sheet.image_at((7176,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F9']=pygame.transform.scale(sheet.image_at((8201,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
+    officeIntImages['MASK-F1']=pygame.transform.scale(sheet.image_at((1,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F2']=pygame.transform.scale(sheet.image_at((1026,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F3']=pygame.transform.scale(sheet.image_at((2051,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F4']=pygame.transform.scale(sheet.image_at((3076,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F5']=pygame.transform.scale(sheet.image_at((4101,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F6']=pygame.transform.scale(sheet.image_at((5126,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F7']=pygame.transform.scale(sheet.image_at((6151,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F8']=pygame.transform.scale(sheet.image_at((7176,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F9']=pygame.transform.scale(sheet.image_at((8201,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
     
     
 def loadCameraFrames():
