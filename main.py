@@ -22,16 +22,21 @@ musicBox=pygame.sprite.Sprite()#sprite for musicbox timer on PRISECOUNTER camera
 monitor=pygame.sprite.Sprite()#sprite for monitor closing/opening when opening cameras
 white=pygame.sprite.Sprite()
 flashlight=pygame.sprite.Sprite()
-
-TB=pygame.sprite.Sprite() #Toy bonnie
+#TOYBONNIE
+TB=pygame.sprite.Sprite() 
 TB.ai=15 #ai level
 TB.pos='SHOWSTAGE' #current location
 TB.move=False #if movechance alows it to move
-
-TC=pygame.sprite.Sprite() #Toy bonnie
-TC.ai=17 #ai level
-TC.pos='OFFICE' #current location
-TC.move=False #if movechance alows it to move
+#TOY CHICA
+TC=pygame.sprite.Sprite() 
+TC.ai=12 
+TC.pos='SHOWSTAGE' 
+TC.move=False
+#TOY FREDDY
+TF=pygame.sprite.Sprite() 
+TF.ai=12 
+TF.pos='SHOWSTAGE' 
+TF.move=False
 #OFFICE ATTRIBUTES
 office.side='NONE' #Which was the camera is turning(helps keeps objects in sync when moving)
 office.light='NONE' #Current light that is on , only one can be on at a time. The states it can be are 'NONE' , 'LEFT' , 'RIGHT' , 'FRONT'
@@ -181,10 +186,7 @@ def syncMove(sprite):
         sprite.dx=25
     elif office.side=='NONE':
         sprite.dx=0
-        
-
 def drawOffice():
-    
     #changes office state / sprite depending on which lights are on
     if office.light=='NONE':
         office.image=officeImages['ONN']
@@ -205,8 +207,12 @@ def drawOffice():
         screen.blit(leftOff.image, leftOff.rect)
         screen.blit(rightOn.image,rightOn.rect)
     elif office.light=='FRONT':
-        if TC.pos!='OFFICE-HALLWAY':
+        if TC.pos!='OFFICE-HALLWAY' and TF.pos!='OFFICE-HALL1' and TF.pos!='OFFICE-HALL2':
             office.image=officeImages['OFN']
+        elif TF.pos=='OFFICE-HALL1':
+            office.image=officeImages['OF_T-FREDDY1']
+        elif TF.pos=='OFFICE-HALL2':
+            office.image=officeImages['OF_T-FREDDY2']
         elif TC.pos=='OFFICE-HALLWAY':
             office.image=officeImages['OF_T-CHICA1']
         screen.blit(leftOff.image, leftOff.rect)
@@ -326,14 +332,18 @@ def drawCams():
             cam.image=camImages['SHOWSTAGE-FULL/N']
             if cam.flash:
                 cam.image=camImages['SHOWSTAGE-FULL/L']
-        elif TB.pos!='SHOWSTAGE' and TC.pos=='SHOWSTAGE':
+        elif TB.pos!='SHOWSTAGE' and TC.pos=='SHOWSTAGE' and TF.pos=='SHOWSTAGE':
             cam.image=camImages['SHOWSTAGE-F&C/N']
             if cam.flash:
                 cam.image=camImages['SHOWSTAGE-F&C/L']
-        elif TB.pos!='SHOWSTAGE' and TC.pos!='SHOWSTAGE':
+        elif TB.pos!='SHOWSTAGE' and TC.pos!='SHOWSTAGE' and TF.pos=='SHOWSTAGE':
             cam.image=camImages['SHOWSTAGE-F/N']
             if cam.flash:
                 cam.image=camImages['SHOWSTAGE-F/L']
+        elif TB.pos!='SHOWSTAGE' and TC.pos!='SHOWSTAGE' and TF.pos!='SHOWSTAGE':
+            cam.image=camImages['SHOWSTAGE-EMPTY']
+            if cam.flash:
+                cam.image=camImages['SHOWSTAGE-EMPTY']
             
         textCam.image=camUIImages['TEXT-SHOWSTAGE']
         camGbox.rect.x=cambox9.rect.x
@@ -345,7 +355,10 @@ def drawCams():
         camGbox.rect.x=cambox10.rect.x
         camGbox.rect.y=cambox10.rect.y
         if cam.flash:
-            cam.image=camImages['GAMEAREA-BB/L']
+            if TF.pos!='GAMEAREA':
+                cam.image=camImages['GAMEAREA-BB/L']
+            elif TF.pos=='GAMEAREA':
+                cam.image=camImages['GAMEAREA-BB&F/L']
     elif player.currentCam=='PRISECOUNTER':
         cam.image=camImages['PRISECOUNTER-EMPTY/N']
         textCam.image=camUIImages['TEXT-PRISECOUNTER']
@@ -419,7 +432,7 @@ def drawCams():
             if cam.flash:
                 if TC.pos!='PARTYROOM4':
                     cam.image=camImages['PARTYROOM4-EMPTY/L']
-                elif TC.pos=='PARTYTOOM4':
+                elif TC.pos=='PARTYROOM4':
                     cam.image=camImages['PARTYROOM4-TC/L']
         elif TB.pos=='PARTYROOM4':
             cam.image=camImages['PARTYROOM4-TB/N']
@@ -627,6 +640,7 @@ def updateAi():
     if(cam.moveTimer>=150):
         ToyBonnieAi()
         ToyChicaAi()
+        ToyFreddyAi()
         cam.moveTimer=0
 def ToyBonnieAi():
     
@@ -664,7 +678,7 @@ def ToyChicaAi():
         TC.move=False
         
     if TC.move:
-        if TC.pos=='SHOWSTAGE':
+        if TC.pos=='SHOWSTAGE' and TB.pos!='SHOWSTAGE':
             TC.pos='MAINHALL'
             TC.move=False
         elif TC.pos=='MAINHALL':
@@ -686,6 +700,29 @@ def ToyChicaAi():
             TC.pos='IN-OFFICE'
             office.inside=True
             TC.move=False
+def ToyFreddyAi():
+    
+    mChance=random.randint(1,20)
+    if(TF.ai>=mChance):
+        TF.move=True
+    else:
+        TF.move=False
+        
+    if TF.move:
+        if TF.pos=='SHOWSTAGE' and TC.pos!='SHOWSTAGE' and TB.pos!='SHOWSTAGE':
+            TF.pos='GAMEAREA'
+            TF.move=False
+        elif TF.pos=='GAMEAREA':
+            TF.pos='OFFICE-HALL1'
+            TF.move=False
+        elif TF.pos=='OFFICE-HALL1':
+            TF.pos='OFFICE-HALL2'
+            TF.move=False
+        elif TF.pos=='OFFICE-HALL2' and player.camsUp==True:
+            TF.pos='IN-OFFICE'
+            TF.move=False    
+            office.inside=True
+
 def setupOffice():
     
     office.image = officeImages['ONN']
@@ -1115,15 +1152,15 @@ def loadOfficeInteractives():
     officeIntImages['FLASHLIGHT-4']=pygame.transform.scale(sheet.image_at((10754,787,100,50), colorkey =(0,0,0)), (WIDTH/12.8,HEIGHT/18))
     officeIntImages['FLASHLIGHT-5']=pygame.transform.scale(sheet.image_at((10855,787,100,50), colorkey =(0,0,0)), (WIDTH/12.8,HEIGHT/18))#completely depleted battery
     #Mask frames
-    officeIntImages['MASK-F1']=pygame.transform.scale(sheet.image_at((1,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F2']=pygame.transform.scale(sheet.image_at((1026,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F3']=pygame.transform.scale(sheet.image_at((2051,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F4']=pygame.transform.scale(sheet.image_at((3076,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F5']=pygame.transform.scale(sheet.image_at((4101,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F6']=pygame.transform.scale(sheet.image_at((5126,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F7']=pygame.transform.scale(sheet.image_at((6151,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F8']=pygame.transform.scale(sheet.image_at((7176,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
-    officeIntImages['MASK-F9']=pygame.transform.scale(sheet.image_at((8201,151,1024,768), colorkey =(5,5,5)), (WIDTH,1440))
+    officeIntImages['MASK-F1']=pygame.transform.scale(sheet.image_at((1,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F2']=pygame.transform.scale(sheet.image_at((1026,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F3']=pygame.transform.scale(sheet.image_at((2051,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F4']=pygame.transform.scale(sheet.image_at((3076,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F5']=pygame.transform.scale(sheet.image_at((4101,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F6']=pygame.transform.scale(sheet.image_at((5126,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F7']=pygame.transform.scale(sheet.image_at((6151,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F8']=pygame.transform.scale(sheet.image_at((7176,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
+    officeIntImages['MASK-F9']=pygame.transform.scale(sheet.image_at((8201,151,1024,768), colorkey =(5,5,5)), (WIDTH,HEIGHT/.75))
     
     
 def loadCameraFrames():
