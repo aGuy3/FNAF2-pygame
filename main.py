@@ -24,19 +24,34 @@ white=pygame.sprite.Sprite()
 flashlight=pygame.sprite.Sprite()
 #TOYBONNIE
 TB=pygame.sprite.Sprite() 
-TB.ai=15 #ai level
+TB.ai=0 #ai level
 TB.pos='SHOWSTAGE' #current location
 TB.move=False #if movechance alows it to move
 #TOY CHICA
 TC=pygame.sprite.Sprite() 
-TC.ai=12 
+TC.ai=0
 TC.pos='SHOWSTAGE' 
 TC.move=False
 #TOY FREDDY
 TF=pygame.sprite.Sprite() 
-TF.ai=12 
+TF.ai=0 
 TF.pos='SHOWSTAGE' 
 TF.move=False
+#WITHERED BONNIE
+WB=pygame.sprite.Sprite() 
+WB.ai=12
+WB.pos='PARTYROOM1' 
+WB.move=False
+#WITHERED CHICA
+WC=pygame.sprite.Sprite() 
+WC.ai=0
+WC.pos='P&S' 
+WC.move=False
+#WITHERED FREDDY
+WF=pygame.sprite.Sprite() 
+WF.ai=0
+WF.pos='P&S' 
+WF.move=False
 #OFFICE ATTRIBUTES
 office.side='NONE' #Which was the camera is turning(helps keeps objects in sync when moving)
 office.light='NONE' #Current light that is on , only one can be on at a time. The states it can be are 'NONE' , 'LEFT' , 'RIGHT' , 'FRONT'
@@ -70,6 +85,7 @@ def update():
     syncMove(desk2)
     syncMove(desk3)
     syncMove(desk4)
+    syncMove(toyfreddy)
     updateAi()
 def updateOffice():
     
@@ -136,7 +152,11 @@ def updateOffice():
                 blackscreen.opacity=255
                 TC.pos='SHOWSTAGE'
                 office.inside=False
-        
+        elif TF.pos=='IN-OFFICE':
+            if office.maskTime>120:
+                blackscreen.opacity=255
+                TC.pos='SHOWSTAGE'
+                office.inside=False
         
     if office.maskTime>120:
         if blackscreen.opacity>=0:
@@ -152,7 +172,7 @@ def updateOffice():
             
     office.rect.x+=office.dx
     drawMaskAnimation()
-    drawCameraAnimation()
+    drawCameraAnimation() 
     office.deskFrame+=1
     if office.deskFrame>4:
         office.deskFrame=0
@@ -187,7 +207,7 @@ def syncMove(sprite):
     elif office.side=='NONE':
         sprite.dx=0
 def drawOffice():
-    #changes office state / sprite depending on which lights are on
+    #changes office state / sprite depending on which lights are on / animatronics in hall or vent 
     if office.light=='NONE':
         office.image=officeImages['ONN']
         screen.blit(leftOff.image, leftOff.rect)
@@ -207,14 +227,18 @@ def drawOffice():
         screen.blit(leftOff.image, leftOff.rect)
         screen.blit(rightOn.image,rightOn.rect)
     elif office.light=='FRONT':
-        if TC.pos!='OFFICE-HALLWAY' and TF.pos!='OFFICE-HALL1' and TF.pos!='OFFICE-HALL2':
+        if TC.pos!='OFFICE-HALLWAY' and TF.pos!='OFFICE-HALL1' and TF.pos!='OFFICE-HALL2' and WB.pos!='OFFICE-HALL' and WF.pos!='OFFICE-HALL':
             office.image=officeImages['OFN']
-        elif TF.pos=='OFFICE-HALL1':
-            office.image=officeImages['OF_T-FREDDY1']
+        elif WF.pos=='OFFICE-HALL':
+            office.image=officeImages['OF_W-FREDDY1']
         elif TF.pos=='OFFICE-HALL2':
             office.image=officeImages['OF_T-FREDDY2']
+        elif TF.pos=='OFFICE-HALL1':
+            office.image=officeImages['OF_T-FREDDY1']
         elif TC.pos=='OFFICE-HALLWAY':
             office.image=officeImages['OF_T-CHICA1']
+        elif WB.pos=='OFFICE-HALL':
+            office.image=officeImages['OF_W-BONNIE1']
         screen.blit(leftOff.image, leftOff.rect)
         screen.blit(rightOff.image,rightOff.rect)
 
@@ -328,7 +352,7 @@ def updateCams():
 def drawCams():
 
     if player.currentCam=='SHOWSTAGE':
-        if TB.pos=='SHOWSTAGE' and TC.pos=='SHOWSTAGE':
+        if TB.pos=='SHOWSTAGE' and TC.pos=='SHOWSTAGE' and TF.pos=='SHOWSTAGE':
             cam.image=camImages['SHOWSTAGE-FULL/N']
             if cam.flash:
                 cam.image=camImages['SHOWSTAGE-FULL/L']
@@ -377,11 +401,17 @@ def drawCams():
         if TC.pos!='MAINHALL':
             cam.image=camImages['MAINHALL-EMPTY/N']
             if cam.flash:
-                cam.image=camImages['MAINHALL-EMPTY/L']
+                if WB.pos!='MAINHALL' and WF.pos!='MAINHALL':
+                    cam.image=camImages['MAINHALL-EMPTY/L']
+                elif WF.pos=='MAINHALL':
+                    cam.image=camImages['MAINHALL-WF/L']
+                elif WB.pos=='MAINHALL':
+                    cam.image=camImages['MAINHALL-WB/L']
         elif TC.pos=='MAINHALL':
             cam.image=camImages['MAINHALL-TC/N']
             if cam.flash:
-                cam.image=camImages['MAINHALL-TC/L']
+                cam.image=camImages['MAINHALL-TC/L']      
+        
         textCam.image=camUIImages['TEXT-MAINHALL']
         camGbox.rect.x=cambox7.rect.x
         camGbox.rect.y=cambox7.rect.y
@@ -392,17 +422,28 @@ def drawCams():
         camGbox.rect.x=cambox8.rect.x
         camGbox.rect.y=cambox8.rect.y
         if cam.flash:
-            cam.image=camImages['P&S-FULL/L']
+            if WF.pos=='P&S' and WB.pos=='P&S' and WC.pos=='P&S':
+                cam.image=camImages['P&S-FULL/L']
+            elif WF.pos=='P&S' and WB.pos!='P&S' and WC.pos=='P&S':
+                cam.image=camImages['P&S-WF&WC/L']
+            elif WF.pos=='P&S' and WB.pos!='P&S' and WC.pos!='P&S':
+                cam.image=camImages['P&S-WF/L']
+            elif WF.pos!='P&S' and WB.pos!='P&S' and WC.pos=='P&S':
+                cam.image=camImages['P&S-EMPTY/L']
     elif player.currentCam=='PARTYROOM1':
         cam.image=camImages['PARTYROOM1-EMPTY/N']
         textCam.image=camUIImages['TEXT-PARTYROOM1']
         camGbox.rect.x=cambox1.rect.x
         camGbox.rect.y=cambox1.rect.y
         if cam.flash:
-            if TC.pos!='PARTYROOM1':
+            if TC.pos!='PARTYROOM1' and WB.pos!='PARTYROOM1'and WF.pos!='PARTYROOM1':
                 cam.image=camImages['PARTYROOM1-EMPTY/L']
             elif TC.pos=='PARTYROOM1':
                 cam.image=camImages['PARTYROOM1-TC/L']
+            elif WB.pos=='PARTYROOM1':
+                cam.image=camImages['PARTYROOM1-WB/L']
+            elif WF.pos=='PARTYROOM1':
+                cam.image=camImages['PARTYROOM1-WF/L']
             
     elif player.currentCam=='PARTYROOM2':
         cam.image=camImages['PARTYROOM2-EMPTY/N']
@@ -410,10 +451,12 @@ def drawCams():
         camGbox.rect.x=cambox2.rect.x
         camGbox.rect.y=cambox2.rect.y
         if cam.flash:
-            if TB.pos!='PARTYROOM2':
+            if TB.pos!='PARTYROOM2' and WC.pos!='PARTYROOM2':
                 cam.image=camImages['PARTYROOM2-EMPTY/L']
-            else:
+            elif TB.pos=='PARTYROOM2':
                 cam.image=camImages['PARTYROOM2-TB/L']
+            elif WC.pos=='PARTYROOM2':
+                cam.image=camImages['PARTYROOM2-WC/L']
             
     elif player.currentCam=='PARTYROOM3':
         cam.image=camImages['PARTYROOM3-EMPTY/N']
@@ -430,10 +473,12 @@ def drawCams():
         if TB.pos!='PARTYROOM4':
             cam.image=camImages['PARTYROOM4-EMPTY/N']
             if cam.flash:
-                if TC.pos!='PARTYROOM4':
+                if TC.pos!='PARTYROOM4' and WC.pos!='PARTYROOM4':
                     cam.image=camImages['PARTYROOM4-EMPTY/L']
                 elif TC.pos=='PARTYROOM4':
                     cam.image=camImages['PARTYROOM4-TC/L']
+                elif WC.pos=='PARTYROOM4':
+                    cam.image=camImages['PARTYROOM4-WC/L']
         elif TB.pos=='PARTYROOM4':
             cam.image=camImages['PARTYROOM4-TB/N']
             if cam.flash:
@@ -448,20 +493,24 @@ def drawCams():
         camGbox.rect.x=cambox5.rect.x
         camGbox.rect.y=cambox5.rect.y
         if cam.flash:
-            if TC.pos!='LEFTVENT':
+            if TC.pos!='LEFTVENT' and WB.pos!='LEFTVENT':
                 cam.image=camImages['LEFTVENT-EMPTY/L']
-            if TC.pos=='LEFTVENT':
+            elif TC.pos=='LEFTVENT':
                 cam.image=camImages['LEFTVENT-TC/L']
+            elif WB.pos=='LEFTVENT':
+                cam.image=camImages['LEFTVENT-WB/L']
     elif player.currentCam=='RIGHTVENT':
         cam.image=camImages['RIGHTVENT-EMPTY/N']
         textCam.image=camUIImages['TEXT-RIGHTAIRVENT']
         camGbox.rect.x=cambox6.rect.x
         camGbox.rect.y=cambox6.rect.y
         if cam.flash:
-            if TB.pos!='RIGHTVENT':
+            if TB.pos!='RIGHTVENT' and WC.pos!='RIGHTVENT':
                 cam.image=camImages['RIGHTVENT-EMPTY/L']
-            else:
+            elif TB.pos=='RIGHTVENT':
                 cam.image=camImages['RIGHTVENT-TB/L']
+            elif WC.pos=='RIGHTVENT':
+                cam.image=camImages['RIGHTVENT-WC/L']
     
 def draw():
     screen.fill(BGCOLOR)
@@ -470,6 +519,8 @@ def draw():
     screen.blit(bg, (0, 0))
     screen.blit(office.image,office.rect)
     drawOffice()
+    if TF.pos=='IN-OFFICE':
+        screen.blit(toyfreddy.image,toyfreddy.rect)
     drawFanAnimation()
 #draws UI
     screen.blit(maskButton.image,maskButton.rect)
@@ -641,6 +692,9 @@ def updateAi():
         ToyBonnieAi()
         ToyChicaAi()
         ToyFreddyAi()
+        WitheredBonnieAi()
+        WitheredChicaAi()
+        WitheredFreddyAi()
         cam.moveTimer=0
 def ToyBonnieAi():
     
@@ -722,7 +776,77 @@ def ToyFreddyAi():
             TF.pos='IN-OFFICE'
             TF.move=False    
             office.inside=True
-
+def WitheredBonnieAi():
+    
+    mChance=random.randint(1,20)
+    if(WB.ai>=mChance):
+        WB.move=True
+    else:
+        WB.move=False
+        
+    if WB.move:
+        if WB.pos=='P&S':
+            WB.pos='MAINHALL'
+            WB.move=False
+        elif WB.pos=='MAINHALL':
+            WB.pos='OFFICE-HALL'
+            WB.move=False
+        elif WB.pos=='OFFICE-HALL':
+            WB.pos='PARTYROOM1'
+            WB.move=False
+        elif WB.pos=='PARTYROOM1':
+            WB.pos='LEFTVENT'
+            WB.move=False
+        elif WB.pos=='LEFTVENT':
+            WB.pos='IN-OFFICE'
+            WB.move=False
+            office.inside=True
+def WitheredChicaAi():
+    
+    mChance=random.randint(1,20)
+    if(WC.ai>=mChance):
+        WC.move=True
+    else:
+        WC.move=False
+        
+    if WC.move:
+        if WC.pos=='P&S' and WB.pos!='P&S':
+            WC.pos='PARTYROOM4'
+            WC.move=False
+        elif WC.pos=='PARTYROOM4':
+            WC.pos='PARTYROOM2'
+            WC.move=False
+        elif WC.pos=='PARTYROOM2':
+            WC.pos='RIGHTVENT'
+            WC.move=False
+        elif WC.pos=='RIGHTVENT':
+            WC.pos='IN-OFFICE'
+            office.inside=True
+def WitheredFreddyAi():
+    
+    mChance=random.randint(1,20)
+    if(WF.ai>=mChance):
+        WF.move=True
+    else:
+        WF.move=False
+        
+    if WF.move:
+        if WF.pos=='P&S' and WB.pos!='P&S' and WC.pos!='P&S':
+            WF.pos='MAINHALL'
+            WF.move=False
+        elif WF.pos=='MAINHALL':
+            WF.pos='PARTYROOM1'
+            WF.move=False
+        elif WF.pos=='PARTYROOM1':
+            WF.pos='OFFICE-HALL'
+            WF.move=False
+        elif WF.pos=='OFFICE-HALL':
+            WF.pos='OFFICE'
+            WF.move=False
+        elif WF.pos=='OFFICE':
+            WF.pos='IN-OFFICE'
+            WF.move=False
+            office.inside=True
 def setupOffice():
     
     office.image = officeImages['ONN']
@@ -731,7 +855,7 @@ def setupOffice():
     office.rect.x = 0
     office.dx=0
 def setupOfficeInts():
-    global leftOff ,leftOn, rightOff , rightOn ,toybonnie , toychica ,blackscreen, maskButton , camButton ,nightText , amText , flashlightText, mask1 , mask2 , mask3 , mask4 , mask5 , mask6 , mask7 , mask8 , mask9 ,mask10 ,desk1 , desk2 , desk3 , desk4
+    global leftOff ,leftOn, rightOff , rightOn ,toybonnie , toychica ,  toyfreddy ,blackscreen, maskButton , camButton ,nightText , amText , flashlightText, mask1 , mask2 , mask3 , mask4 , mask5 , mask6 , mask7 , mask8 , mask9 ,mask10 ,desk1 , desk2 , desk3 , desk4
     
     #light buttons
     leftOff=pygame.sprite.Sprite(officeInts)
@@ -827,6 +951,13 @@ def setupOfficeInts():
     toychica.rect.x=0
     toychica.rect.y=0
     toychica.dx=0
+    
+    toyfreddy=pygame.sprite.Sprite(officeInts)
+    toyfreddy.image=animatronicImages['ANIM-TF/OFFICE']
+    toyfreddy.rect=toyfreddy.image.get_rect()
+    toyfreddy.rect.x=WIDTH/1.536
+    toyfreddy.rect.y=HEIGHT/10.8
+    toyfreddy.dx=0
     
     blackscreen=pygame.sprite.Sprite(officeInts)
     blackscreen.image=animatronicImages['ANIM-BLACKSCREEN']
@@ -1421,6 +1552,12 @@ def loadToyChica():
     sheet=Spritesheet('ToyChica-SS.png')
     
     animatronicImages['ANIM-TC/OFFICE']=pygame.transform.scale(sheet.image_at((1026,4615,645,895), colorkey =(10,10,0)), (WIDTH/2.105,HEIGHT/.853))
+def loadToyFreddy():
+    
+    sheet=Spritesheet('ToyFreddy-SS.png')
+    
+    animatronicImages['ANIM-TF/OFFICE']=pygame.transform.scale(sheet.image_at((1,4615,391,576), colorkey =(10,10,0)), (WIDTH/3.106,HEIGHT/1.146))
+
 def mainloop():
     running = True
     clock = pygame.time.Clock()
@@ -1465,6 +1602,7 @@ loadTitleScreen()
 loadOverlays()
 loadToyBonnie()
 loadToyChica()
+loadToyFreddy()
 setupOffice()
 setupOfficeInts()
 setupCams()
