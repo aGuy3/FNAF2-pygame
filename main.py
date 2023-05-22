@@ -11,7 +11,7 @@ pygame.display.set_icon(windowIcon)
 office=pygame.sprite.Group()
 officeInts=pygame.sprite.Group()
 officeDesks=pygame.sprite.Group()
-
+sfx=pygame.sprite.Group()
 player=pygame.sprite.Group()
 camUI=pygame.sprite.Group()#Group for the UI in camera
 cam=pygame.sprite.Sprite()#sprite for the camera sprites for the diffrent rooms
@@ -22,47 +22,7 @@ musicBox=pygame.sprite.Sprite()#sprite for musicbox timer on PRISECOUNTER camera
 monitor=pygame.sprite.Sprite()#sprite for monitor closing/opening when opening cameras
 white=pygame.sprite.Sprite()
 flashlight=pygame.sprite.Sprite()
-#TOYBONNIE
-TB=pygame.sprite.Sprite() 
-TB.ai=12 #ai level
-TB.pos='SHOWSTAGE' #current location
-TB.move=False #if movechance alows it to move
-#TOY CHICA
-TC=pygame.sprite.Sprite() 
-TC.ai=8
-TC.pos='SHOWSTAGE' 
-TC.move=False
-#TOY FREDDY
-TF=pygame.sprite.Sprite() 
-TF.ai=5 
-TF.pos='SHOWSTAGE' 
-TF.move=False
-#WITHERED BONNIE
-WB=pygame.sprite.Sprite() 
-WB.ai=12
-WB.pos='P&S' 
-WB.move=False
-#WITHERED CHICA
-WC=pygame.sprite.Sprite() 
-WC.ai=10
-WC.pos='P&S' 
-WC.move=False
-#WITHERED FREDDY
-WF=pygame.sprite.Sprite() 
-WF.ai=8
-WF.pos='P&S' 
-WF.move=False
-#OFFICE ATTRIBUTES
-office.side='NONE' #Which was the camera is turning(helps keeps objects in sync when moving)
-office.light='NONE' #Current light that is on , only one can be on at a time. The states it can be are 'NONE' , 'LEFT' , 'RIGHT' , 'FRONT'
-office.deskFrame=0 #Frame number for desk animation
-office.maskFrame=0 #Frame number for mask animation
-office.inside=False #if an animatronic is inside the office , helps with use of mask and killing of the player
-office.maskTime=0 #timer for how long the mask needs to be on when an animatronic is in the room
-#CAMERA ATRRIBUTES
-cam.move='LEFT' #which way the camera is moving
-cam.flash=False #if the flashlight is on in cameras
-cam.moveTimer=0 #timer for the movement of animatronics
+
 
 static.frame=0 #Frame number for static animation
 monitor.frame=0 #Frame number for camera animation
@@ -74,9 +34,13 @@ player.maskOn=False #if mask is on/off
 player.C=0 #number to help use of mask button in onMouseMove
 player.C2=0
 player.currentCam='PRISECOUNTER' #keeps track of current camera that the player is on
+player.flashbattery=100 #flashlight battery
+player.dead=False
+player.inMenu=False
 def update():
     updateOffice()
     updateCams()
+    PlayAmbience()
     syncMove(leftOff)
     syncMove(rightOff)
     syncMove(leftOn)
@@ -86,9 +50,30 @@ def update():
     syncMove(desk3)
     syncMove(desk4)
     syncMove(toyfreddy)
+    syncMove(mangleO)
+    syncMove(goldenfreddy)
+    ToyBonnieJS()
     updateAi()
+    Musicbox()
+    
 def updateOffice():
     
+    if TC.pos=='OFFICE-HALLWAY' or TF.pos=='OFFICE-HALL1' or TF.pos=='OFFICE-HALL2' or WB.pos=='OFFICE-HALL' or WF.pos=='OFFICE-HALL' or MA.pos=='OFFICE-HALL' or WFO.pos=='OFFICE-HALL' or GF.pos=='OFFICE-HALL':
+        office.hallfull=True
+    else:
+        office.hallfull=False
+        sfx.ambiencescary.stop()
+    
+    if monitor.frame<=1 and GF.pos=='IN-OFFICE' or GF.pos=='OFFICE-HALL':
+        GF.seen=True
+    GF.timer+=1
+    if GF.increase:
+        GF.value+=1
+    if WFO.ai>0:
+        WFO.valueTimer+=1
+        if office.inside==False and WFO.valueTimer>=30:
+            WFO.value+=1
+            WFO.valueTimer=0
     #Code for bonnie and chica in office 
     blackscreen.image.set_alpha(blackscreen.opacity)
     toybonnie.rect.x-=toybonnie.dx
@@ -173,15 +158,16 @@ def updateOffice():
                 WF.pos='P&S'
                 office.inside=False
     if office.maskTime>120:
+        sfx.stare.stop()
         if blackscreen.opacity>=0:
-            blackscreen.opacity-=2
+            blackscreen.opacity-=5
         if blackscreen.opacity<=0:
             toybonnie.rect.x=WIDTH/1.3714
             toybonnie.dx=0
             toychica.rect.x=0
             toychica.dx=0
             office.maskTime=0
-    
+            
             
             
     office.rect.x+=office.dx
@@ -193,6 +179,7 @@ def updateOffice():
         
     if office.maskFrame<9 and player.maskOn:
         office.maskFrame+=1
+        office.light='NONE'
     elif office.maskFrame>=0 and player.maskOn==False:
         office.maskFrame-=1
     if office.maskFrame<0:
@@ -211,7 +198,31 @@ def updateOffice():
     elif office.rect.x>0:
         office.side='NONE'
         office.rect.x=0
+def PlayAmbience():
 
+    if player.maskOn==True and office.maskFrame==1:
+        sfx.maskon.play()
+        sfx.fansound.play(-1)
+        sfx.ambience3.play(-1)
+    if player.maskOn==True and office.maskFrame==8:
+        sfx.maskbreaths.play(-1)
+        
+    if player.maskOn==False  and office.maskFrame==6:
+        sfx.maskbreaths.stop()
+        sfx.maskoff.play()
+    if player.camsUp==True and monitor.frame==1:
+        sfx.camBackground.play(-1)
+        sfx.camup.play()
+    if player.camsUp==False and monitor.frame==6:
+        sfx.camBackground.stop()
+        sfx.camdown.play()
+    if player.camsUp:
+        sfx.fansound.set_volume(.3)
+        sfx.ambience3.set_volume(.3) 
+    else:
+        sfx.fansound.set_volume(1)
+        sfx.ambience3.set_volume(1)
+    
 def syncMove(sprite):
     sprite.rect.x+=sprite.dx
     if office.side=='RIGHT': 
@@ -227,22 +238,35 @@ def drawOffice():
         screen.blit(leftOff.image, leftOff.rect)
         screen.blit(rightOff.image,rightOff.rect)
     elif office.light=='LEFT':
+        sfx.buzzlight.play()
         if TC.pos!='OFFICE':
             office.image=officeImages['OLN']
         elif TC.pos=='OFFICE':
             office.image=officeImages['OL_T-CHICA2']
         screen.blit(leftOn.image, leftOn.rect)
         screen.blit(rightOff.image,rightOff.rect)
+        player.flashbattery-=.05
     elif office.light=='RIGHT':
-        if TB.pos!='OFFICE':
+        sfx.buzzlight.play()
+        if TB.pos!='OFFICE' and MA.pos!='OFFICE':
             office.image=officeImages['ORN']
-        else:
+        elif TB.pos=='OFFICE':
             office.image=officeImages['OR_T-BONNIE1']
+        elif MA.pos=='OFFICE':
+            office.image=officeImages['OR_MANGLE2']
         screen.blit(leftOff.image, leftOff.rect)
         screen.blit(rightOn.image,rightOn.rect)
+        player.flashbattery-=.05
     elif office.light=='FRONT':
-        if TC.pos!='OFFICE-HALLWAY' and TF.pos!='OFFICE-HALL1' and TF.pos!='OFFICE-HALL2' and WB.pos!='OFFICE-HALL' and WF.pos!='OFFICE-HALL':
+        sfx.buzzlight.play()
+        WFO.value=0
+        player.flashbattery-=.05
+        if TC.pos!='OFFICE-HALLWAY' and TF.pos!='OFFICE-HALL1' and TF.pos!='OFFICE-HALL2' and WB.pos!='OFFICE-HALL' and WF.pos!='OFFICE-HALL' and MA.pos!='OFFICE-HALL' and WFO.pos!='OFFICE-HALL' and GF.pos!='OFFICE-HALL':
             office.image=officeImages['OFN']
+        elif GF.pos=='OFFICE-HALL':
+            office.image=officeImages['OF_G-FREDDY']
+        elif WFO.pos=='OFFICE-HALL':
+            office.image=officeImages['OF_W-FOXY1']
         elif WF.pos=='OFFICE-HALL':
             office.image=officeImages['OF_W-FREDDY1']
         elif TF.pos=='OFFICE-HALL2':
@@ -253,6 +277,8 @@ def drawOffice():
             office.image=officeImages['OF_T-CHICA1']
         elif WB.pos=='OFFICE-HALL':
             office.image=officeImages['OF_W-BONNIE1']
+        elif MA.pos=='OFFICE-HALL':
+            office.image=officeImages['OF_MANGLE1']
         screen.blit(leftOff.image, leftOff.rect)
         screen.blit(rightOff.image,rightOff.rect)
     if office.inside:
@@ -262,6 +288,7 @@ def drawOffice():
             office.image=officeImages['ON_W-FREDDY2']
         elif WC.pos=='IN-OFFICE':
             office.image=officeImages['ON_W-CHICA']
+    
 def drawFanAnimation():
 
 #Desk Fan animation
@@ -332,10 +359,17 @@ def drawCameraAnimation():
         monitor.image=officeIntImages['CAM-F10']
     elif monitor.frame==11:
         monitor.image=officeIntImages['CAM-F11']
+        if player.camsUp:
+            if player.currentCam=='PRISECOUNTER':
+                sfx.musicbox.play()
+        else:
+            sfx.musicbox.stop()
 def drawWhiteAnimation():
     
     if white.frame==1:
         white.image=overlayImages['WHITE1']
+        sfx.blip.play()
+        
     if white.frame==2:
         white.image=overlayImages['WHITE2']
     if white.frame==3:
@@ -344,13 +378,69 @@ def drawWhiteAnimation():
         white.image=overlayImages['WHITE4']
     if white.frame==5:
         white.image=overlayImages['WHITE5']
+def drawFlashlightBattery():
+    if player.flashbattery>=80:
+        flashlight.image=officeIntImages['FLASHLIGHT-1']
+    elif player.flashbattery>=60:
+        flashlight.image=officeIntImages['FLASHLIGHT-2']
+    elif player.flashbattery>=40:
+        flashlight.image=officeIntImages['FLASHLIGHT-3']
+    elif player.flashbattery>=20:
+        flashlight.image=officeIntImages['FLASHLIGHT-4']
+    elif player.flashbattery<=0:
+        flashlight.image=officeIntImages['FLASHLIGHT-5']
+def ToyBonnieJS():
+    if TB.attack:
+        if TB.frame<13:
+            TB.frame+=1
+    if TB.frame==1:
+        TB.image=animatronicImages['ANIM-TB_JS1']
+        sfx.js1.play()
+    if TB.frame==2:
+        TB.image=animatronicImages['ANIM-TB_JS2']
+    if TB.frame==3:
+        TB.image=animatronicImages['ANIM-TB_JS3']
+    if TB.frame==4:
+        TB.image=animatronicImages['ANIM-TB_JS4']
+    if TB.frame==5:
+        TB.image=animatronicImages['ANIM-TB_JS5']
+    if TB.frame==6:
+        TB.image=animatronicImages['ANIM-TB_JS6']
+    if TB.frame==7:
+        TB.image=animatronicImages['ANIM-TB_JS7']
+    if TB.frame==8:
+        TB.imame=animatronicImages['ANIM-TB_JS8']
+    if TB.frame==9:
+        TB.image=animatronicImages['ANIM-TB_JS9']
+    if TB.frame==10:
+        TB.image=animatronicImages['ANIM-TB_JS10']
+    if TB.frame==11:
+        TB.image=animatronicImages['ANIM-TB_JS11']
+    if TB.frame==12:
+        TB.image=animatronicImages['ANIM-TB_JS12']
+    if TB.frame==13:
+        TB.image=animatronicImages['ANIM-TB_JS13']
 def updateCams():
+    
+    if cam.staticTimer>0:
+        cam.staticTimer-=1
+    if cam.staticTimer<=0:
+        cam.staticTimer=0
+    
+    if monitor.frame>9 and GF.seen:
+        GF.pos='N/A'
+        GF.seen=False
+        
     cam.moveTimer+=1
     static.frame+=1
+    
+    if P.out:
+        cam.puppetMoveTimer+=1
     if static.frame>6:
         static.frame=0
     drawStaticAnimation()
     drawWhiteAnimation()
+    
     if white.ani:
         white.image.set_alpha(255)
         white.frame+=1
@@ -360,15 +450,31 @@ def updateCams():
     else:
         white.image.set_alpha(0)
     static.image.set_alpha(random.randint(60,140))
+    
     if cam.move=='RIGHT':
         cam.rect.x+=cam.dx
+        manglePC.rect.x+=cam.dx
+        mangleGA.rect.x+=cam.dx
+        mangleMH.rect.x+=cam.dx
+        mangleP2.rect.x+=cam.dx
     elif cam.move=='LEFT':
         cam.rect.x-=cam.dx
+        manglePC.rect.x-=cam.dx
+        mangleGA.rect.x-=cam.dx
+        mangleMH.rect.x-=cam.dx
+        mangleP2.rect.x-=cam.dx
     if(cam.rect.left>=0 or cam.rect.right<=WIDTH):
         if cam.move=='LEFT':
             cam.move='RIGHT'
         elif cam.move=='RIGHT':
             cam.move='LEFT'
+def camstatic():
+    
+    if cam.staticTimer>0:
+        cam.image=camImages['P&S-FULL/N']
+        sfx.popstatic.play()
+    else:
+        sfx.popstatic.stop()
 def drawCams():
 
     if player.currentCam=='SHOWSTAGE':
@@ -388,35 +494,62 @@ def drawCams():
             cam.image=camImages['SHOWSTAGE-EMPTY']
             if cam.flash:
                 cam.image=camImages['SHOWSTAGE-EMPTY']
-            
+        if TB.pos=='PARTYROOM3' or TC.pos=='MAINHALL' or TF.pos=='GAMEAREA':
+            camstatic()
         textCam.image=camUIImages['TEXT-SHOWSTAGE']
         camGbox.rect.x=cambox9.rect.x
         camGbox.rect.y=cambox9.rect.y
             
     elif player.currentCam=='GAMEAREA':
-        cam.image=camImages['GAMEAREA-BB/N']
+        if BB.pos=='GAMEAREA':
+            cam.image=camImages['GAMEAREA-BB/N']
+            if cam.flash:
+                if TF.pos!='GAMEAREA' and BB.pos=='GAMEAREA':
+                    cam.image=camImages['GAMEAREA-BB/L']
+                elif TF.pos=='GAMEAREA' and BB.pos=='GAMEAREA':
+                    cam.image=camImages['GAMEAREA-BB&F/L']
+        else:
+            cam.image=camImages['GAMEAREA-EMPTY/N']
+            if cam.flash:
+                if TF.pos=='GAMEAREA' and BB.pos!='GAMEAREA':
+                    cam.image=camImages['GAMEAREA-F/L']
+                elif TF.pos!='GAMEAREA' and BB.pos!='GAMEAREA':
+                    cam.image=camImages['GAMEAREA-EMPTY/L']
         textCam.image=camUIImages['TEXT-GAMEAREA']
         camGbox.rect.x=cambox10.rect.x
         camGbox.rect.y=cambox10.rect.y
-        if cam.flash:
-            if TF.pos!='GAMEAREA':
-                cam.image=camImages['GAMEAREA-BB/L']
-            elif TF.pos=='GAMEAREA':
-                cam.image=camImages['GAMEAREA-BB&F/L']
+        if BB.pos=='N/A-1' or TF.pos=='GAMEAREA' or TF.pos=='OFFICE-HALL1' or MA.pos=='GAMEAREA' or MA.pos=='MAINHALL':
+            camstatic()
+        
     elif player.currentCam=='PRISECOUNTER':
         cam.image=camImages['PRISECOUNTER-EMPTY/N']
         textCam.image=camUIImages['TEXT-PRISECOUNTER']
         camGbox.rect.x=cambox11.rect.x
         camGbox.rect.y=cambox11.rect.y
         if cam.flash:
-            cam.image=camImages['PRISECOUNTER-EMPTY/L']
+            if P.pos=='PRISECOUNTER':
+                cam.image=camImages['PRISECOUNTER-M1/L']
+            elif P.pos=='PRISECOUNTER-1':
+                cam.image=camImages['PRISECOUNTER-M2/L']
+            elif P.pos=='PRISECOUNTER-2':
+                cam.image=camImages['PRISECOUNTER-M3/L']
+            else:
+                cam.image=camImages['PRISECOUNTER-EMPTY/L']
+        if MA.pos=='PRISECOUNTER' or MA.pos=='GAMEAREA':
+            camstatic()
+            
     elif player.currentCam=='KIDSCOVE':
         cam.image=camImages['KIDSCOVE-EMPTY/N']
         textCam.image=camUIImages['TEXT-KIDSCOVE']
         camGbox.rect.x=cambox12.rect.x
         camGbox.rect.y=cambox12.rect.y
         if cam.flash:
-            cam.image=camImages['KIDSCOVE-M/L']
+            if MA.pos=='KIDSCOVE':
+                cam.image=camImages['KIDSCOVE-M/L']
+            else:
+                cam.image=camImages['KIDSCOVE-EMPTY/L']
+        if MA.pos=='PRISECOUNTER':
+            camstatic()
     elif player.currentCam=='MAINHALL':
         if TC.pos!='MAINHALL':
             cam.image=camImages['MAINHALL-EMPTY/N']
@@ -430,8 +563,9 @@ def drawCams():
         elif TC.pos=='MAINHALL':
             cam.image=camImages['MAINHALL-TC/N']
             if cam.flash:
-                cam.image=camImages['MAINHALL-TC/L']      
-        
+                cam.image=camImages['MAINHALL-TC/L']
+        if TC.pos=='MAINHALL' or TC.pos=='PARTYROOM4' or WF.pos=='MAINHALL' or WF.pos=='PARTYROOM3' or WB.pos=='MAINHALL' or WB.pos=='OFFICE-HALL' or MA.pos=='MAINHALL' or MA.pos=='OFFICE-HALL':
+            camstatic()
         textCam.image=camUIImages['TEXT-MAINHALL']
         camGbox.rect.x=cambox7.rect.x
         camGbox.rect.y=cambox7.rect.y
@@ -450,6 +584,8 @@ def drawCams():
                 cam.image=camImages['P&S-WF/L']
             elif WF.pos!='P&S' and WB.pos!='P&S' and WC.pos!='P&S':
                 cam.image=camImages['P&S-EMPTY/L']
+        if WF.pos=='MAINHALL' or WB.pos=='MAINHALL' or WC.pos=='PARTYROOM4':
+            camstatic()
     elif player.currentCam=='PARTYROOM1':
         cam.image=camImages['PARTYROOM1-EMPTY/N']
         textCam.image=camUIImages['TEXT-PARTYROOM1']
@@ -462,7 +598,8 @@ def drawCams():
                 cam.image=camImages['PARTYROOM1-TC/L']
             elif WB.pos=='PARTYROOM1':
                 cam.image=camImages['PARTYROOM1-WB/L']
-            
+        if TC.pos=='PARTYROOM1' or TC.pos=='LEFTVENT' or WB.pos=='PARTYROOM1' or WB.pos=='LEFTVENT':
+            camstatic()
             
     elif player.currentCam=='PARTYROOM2':
         if WC.pos!='PARTYROOM2':
@@ -476,6 +613,8 @@ def drawCams():
             cam.image=camImages['PARTYROOM2-WC/N']
             if cam.flash:
                 cam.image=camImages['PARTYROOM2-WC/L']
+        if TB.pos=='PARTYROOM2' or TB.pos=='RIGHTVENT' or WC.pos=='PARTYROOM2' or WC.pos=='RIGHTVENT':
+            camstatic()
         textCam.image=camUIImages['TEXT-PARTYROOM2']
         camGbox.rect.x=cambox2.rect.x
         camGbox.rect.y=cambox2.rect.y
@@ -493,6 +632,8 @@ def drawCams():
             cam.image=camImages['PARTYROOM3-WF/N']
             if cam.flash:
                 cam.image=camImages['PARTYROOM3-WF/L']
+        if TB.pos=='PARTYROOM3' or TB.pos=='PARTYROOM4' or WF.pos=='PARTYROOM3' or WF.pos=='OFFICE-HALL':
+            camstatic()
         textCam.image=camUIImages['TEXT-PARTYROOM3']
         camGbox.rect.x=cambox3.rect.x
         camGbox.rect.y=cambox3.rect.y
@@ -512,6 +653,8 @@ def drawCams():
             cam.image=camImages['PARTYROOM4-TB/N']
             if cam.flash:
                 cam.image=camImages['PARTYROOM4-TB/L']
+        if TB.pos=='PARTYROOM4' or TB.pos=='PARTYROOM2' or WC.pos=='PARTYROOM4' or WC.pos=='PARTYROOM2':
+            camstatic()
         textCam.image=camUIImages['TEXT-PARTYROOM4']
         camGbox.rect.x=cambox4.rect.x
         camGbox.rect.y=cambox4.rect.y
@@ -528,6 +671,10 @@ def drawCams():
                 cam.image=camImages['LEFTVENT-TC/L']
             elif WB.pos=='LEFTVENT':
                 cam.image=camImages['LEFTVENT-WB/L']
+            elif BB.pos=='LEFTVENT':
+                cam.image=camImages['LEFTVENT-BB/L']
+        if TC.pos=='LEFTVENT' or TC.pos=='OFFICE' or WB.pos=='LEFTVENT' or WB.pos=='OFFICE' or BB.pos=='LEFTVENT' or BB.pos=='OFFICE':
+            camstatic()
     elif player.currentCam=='RIGHTVENT':
         cam.image=camImages['RIGHTVENT-EMPTY/N']
         textCam.image=camUIImages['TEXT-RIGHTAIRVENT']
@@ -540,18 +687,68 @@ def drawCams():
                 cam.image=camImages['RIGHTVENT-TB/L']
             elif WC.pos=='RIGHTVENT':
                 cam.image=camImages['RIGHTVENT-WC/L']
-    
+            elif MA.pos=='RIGHTVENT':
+                cam.image=camImages['RIGHTVENT-M/L']
+        if TB.pos=='RIGHTVENT' or TB.pos=='OFFICE' or WC.pos=='RIGHTVENT' or WC.pos=='IN-OFFICE' or MA.pos=='RIGHTVENT' or MA.pos=='OFFICE':
+            camstatic()
+def drawMusicBox():
+    if P.timer>=2000:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR21']
+    elif P.timer>=1900:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR20']
+    elif P.timer>=1800:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR19']
+    elif P.timer>=1700:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR18']
+    elif P.timer>=1600:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR17']
+    elif P.timer>=1500:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR16']
+    elif P.timer>=1400:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR15']
+    elif P.timer>=1300:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR14']
+    elif P.timer>=1200:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR13']
+    elif P.timer>=1100:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR12']
+    elif P.timer>=1000:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR11']
+    elif P.timer>=900:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR10']
+    elif P.timer>=800:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR9']
+    elif P.timer>=700:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR8']
+    elif P.timer>=600:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR7']
+    elif P.timer>=500:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR6']
+    elif P.timer>=400:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR5']
+    elif P.timer>=300:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR4']
+    elif P.timer>=200:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR2']
+    elif P.timer>=100:
+        musicBox.image=camUIImages['CAM-MUSIC_BAR1']
 def draw():
     screen.fill(BGCOLOR)
     bg = pygame.Surface((WIDTH, HEIGHT))
     bg.fill((0, 0, 0))
     screen.blit(bg, (0, 0))
     screen.blit(office.image,office.rect)
-    drawOffice()
+    if player.camsUp==False:
+        drawOffice()
     if TF.pos=='IN-OFFICE':
         screen.blit(toyfreddy.image,toyfreddy.rect)
+    if GF.pos=='IN-OFFICE':
+        screen.blit(goldenfreddy.image,goldenfreddy.rect)
     drawFanAnimation()
 #draws UI
+    drawFlashlightBattery()
+    if MA.pos=='IN-OFFICE':
+        screen.blit(mangleO.image,mangleO.rect)
     screen.blit(maskButton.image,maskButton.rect)
     screen.blit(monitor.image,monitor.rect)
     
@@ -562,6 +759,14 @@ def draw():
     if player.camsUp == True and monitor.frame>=11:
         drawCams()
         screen.blit(cam.image,cam.rect)
+        if MA.pos=='GAMEAREA' and player.currentCam=='GAMEAREA':
+            screen.blit(mangleGA.image,mangleGA.rect)
+        elif MA.pos=='PRISECOUNTER' and player.currentCam=='PRISECOUNTER':
+            screen.blit(manglePC.image,manglePC.rect)
+        elif MA.pos=='MAINHALL' and player.currentCam=='MAINHALL':
+            screen.blit(mangleMH.image,mangleMH.rect)
+        if MA.pos=='PARTYROOM2' and player.currentCam=='PARTYROOM2':
+            screen.blit(mangleP2.image,mangleP2.rect)
         screen.blit(static.image,static.rect)
         screen.blit(camMap.image,camMap.rect)
         screen.blit(cambox1.image,cambox1.rect)
@@ -591,10 +796,15 @@ def draw():
         screen.blit(Text12.image,Text12.rect)
         screen.blit(textCam.image,textCam.rect)
         if player.currentCam=='PRISECOUNTER':
-            screen.blit(musicButtonOff.image,musicButtonOff.rect)
+            drawMusicBox()
+            if P.recharge==False:
+                screen.blit(musicButtonOff.image,musicButtonOff.rect)
+            else:
+                screen.blit(musicButtonOn.image,musicButtonOn.rect)
             screen.blit(textWindUp.image,textWindUp.rect)
             screen.blit(textClick.image,textClick.rect)
-            screen.blit(musicBox.image,musicBox.rect)
+            if P.timer>0:
+                screen.blit(musicBox.image,musicBox.rect)
         screen.blit(camDot.image,camDot.rect)
         screen.blit(camOutline.image,camOutline.rect)
     screen.blit(camButton.image,camButton.rect)
@@ -602,6 +812,8 @@ def draw():
     screen.blit(nightText.image,nightText.rect)
     screen.blit(flashlight.image,flashlight.rect)
     screen.blit(flashlightText.image,flashlightText.rect)
+    if TB.attack:
+        screen.blit(TB.image,TB.rect)
     screen.blit(white.image,white.rect)
     screen.blit(blackscreen.image,blackscreen.rect)
     screen.blit(mask.image,mask.rect)
@@ -609,6 +821,15 @@ def draw():
     
 
 def onMousePress(x, y):
+    #Charges music Box
+    
+    if player.currentCam=='PRISECOUNTER' and player.camsUp==True and x>WIDTH/3.2 and x<WIDTH/3.2 + WIDTH/7.111 and y>HEIGHT/1.384 and y<HEIGHT/1.384 +HEIGHT/9.818:
+        P.recharge=True
+        sfx.windup.play(-1)
+    else:
+        P.recharge=False
+        sfx.windup.stop()
+    
     
     #Turns office lights on depending on where you click
     if player.maskOn==False:
@@ -618,49 +839,80 @@ def onMousePress(x, y):
             office.light='RIGHT'
         elif x>=WIDTH/2.953 and x<=WIDTH/1.476:
             office.light='FRONT'
-            
+            WFO.attackTimer=50
+            if GF.pos=='OFFICE-HALL':
+                GF.increase=True
     #changes current camera selected when cams up
     if player.camsUp:       
         if x>=WIDTH/1.745 and x<=WIDTH/1.597 and y>=HEIGHT/1.469 and y<=HEIGHT/1.344:
             player.currentCam='PARTYROOM1'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.432 and x<=WIDTH/1.3314 and y>=HEIGHT/1.469 and y<=HEIGHT/1.344:
             player.currentCam='PARTYROOM2'
             white.ani=True
-
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.745 and x<=WIDTH/1.59 and y>=HEIGHT/1.741 and y<=HEIGHT/1.569:
             player.currentCam='PARTYROOM3'
-            white.ani=True    
+            white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.432 and x<=WIDTH/1.331 and y>=HEIGHT/1.741 and y<=HEIGHT/1.569:
             player.currentCam='PARTYROOM4'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.729 and x<=WIDTH/1.584 and y>=HEIGHT/1.22 and y<=HEIGHT/1.133:
             player.currentCam='LEFTVENT'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.44 and x<=WIDTH/1.34 and y>=HEIGHT/1.22 and y<=HEIGHT/1.133:
             player.currentCam='RIGHTVENT'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.39 and x<=WIDTH/1.295 and y>=HEIGHT/2.076 and y<=HEIGHT/1.836:
             player.currentCam='MAINHALL'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.745 and x<=WIDTH/1.59 and y>=HEIGHT/2.16 and y<=HEIGHT/1.901:
             player.currentCam='P&S'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.136 and x<=WIDTH/1.07 and y>=HEIGHT/2.37 and y<=HEIGHT/2.065:
             player.currentCam='SHOWSTAGE'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.24 and x<=WIDTH/1.169 and y>=HEIGHT/1.648 and y<=HEIGHT/1.493:
             player.currentCam='GAMEAREA'
             white.ani=True
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
         elif x>=WIDTH/1.09 and x<=WIDTH/1.036 and y>=HEIGHT/1.928 and y<=HEIGHT/1.719:
             player.currentCam='PRISECOUNTER'
+            sfx.musicbox.play(-1)
+            sfx.popstatic.stop()
             white.ani=True
         elif x>=WIDTH/1.122 and x<=WIDTH/1.059 and y>=HEIGHT/1.449 and y<=HEIGHT/1.328:
             player.currentCam='KIDSCOVE'
+            sfx.musicbox.stop()
+            sfx.popstatic.stop()
             white.ani=True
 def onMouseRelease(x, y):
     if player.maskOn==False:
         office.light='NONE'
+        sfx.buzzlight.stop()
+        GF.increase=False
+    if player.currentCam=='PRISECOUNTER' and player.camsUp==True and x>WIDTH/3.2 and x<WIDTH/3.2 + WIDTH/7.111 and y>HEIGHT/1.384 and y<HEIGHT/1.384 +HEIGHT/9.818:
+        P.recharge=False
+        sfx.windup.stop()
+    
 
 def onMouseMove(x, y):
     if x >=WIDTH/1.573 and office.rect.right>WIDTH:
@@ -686,6 +938,7 @@ def onMouseMove(x, y):
                 player.maskOn=True
             elif player.C==2:
                 player.maskOn=False
+       
                 
         #For use of the cam button
     if player.maskOn==False:
@@ -700,7 +953,10 @@ def onMouseMove(x, y):
                 player.camsUp=True
             elif player.C2==2:
                 player.camsUp=False
-    
+                sfx.popstatic.stop()
+    if (player.currentCam=='PRISECOUNTER' and player.camsUp==True and x>WIDTH/3.2 and x<WIDTH/3.2 + WIDTH/7.111 and y>HEIGHT/1.384 and y<HEIGHT/1.384 +HEIGHT/9.818)==False:
+        P.recharge=False
+        sfx.windup.stop()
 
 def onKeyPress(key):
     pass
@@ -709,13 +965,15 @@ def onKeyPress(key):
         office.light='FRONT'
     if key == pygame.K_SPACE:
         cam.flash=True
+        player.flashbattery-=.02
 
 def onKeyRelease(key):
     if key == pygame.K_SPACE and player.maskOn==False:
         office.light='NONE'
+        sfx.buzzlight.stop()
     if key == pygame.K_SPACE:
         cam.flash=False
-        
+    
 def updateAi():
     if(cam.moveTimer>=150):
         ToyBonnieAi()
@@ -724,12 +982,23 @@ def updateAi():
         WitheredBonnieAi()
         WitheredChicaAi()
         WitheredFreddyAi()
+        WitheredFoxyAi()
+        BalloonBoyAi()
+        MangleAi()
+        GoldenFreddyOfficeAi()
         cam.moveTimer=0
+    if cam.puppetMoveTimer>=30 and P.out:
+        PuppetAi()
+        cam.puppetMoveTimer=0
+    if GF.timer>=30:
+        GoldenFreddyHallAi()
+        GF.timer=0
 def ToyBonnieAi():
     
     mChance=random.randint(1,20)
     if(TB.ai>=mChance):
         TB.move=True
+        cam.staticTimer=random.randint(60,120)
     else:
         TB.move=False
     if TB.move:
@@ -747,16 +1016,24 @@ def ToyBonnieAi():
             TB.move=False
         elif TB.pos=='RIGHTVENT':
             TB.pos='OFFICE'
+            sfx.ventwalk.play()
             TB.move=False
         elif TB.pos=='OFFICE' and office.maskTime==0:
             TB.pos='IN-OFFICE'
-            office.inside=True
-            TB.move=False
+            if player.maskOn==False or player.camsUp==True:
+                TB.attack=True
+                player.dead=True
+                TB.move=False
+            else:
+                office.inside=True
+                sfx.stare.play()
+                TB.move=False
 def ToyChicaAi():
     
     mChance=random.randint(1,20)
     if(TC.ai>=mChance):
         TC.move=True
+        cam.staticTimer=random.randint(60,120)
     else:
         TC.move=False
         
@@ -768,6 +1045,8 @@ def ToyChicaAi():
             TC.pos='PARTYROOM4'
             TC.move=False
         elif TC.pos=='PARTYROOM4':
+            if office.hallfull==False:
+                sfx.ambiencescary.play(-1)
             TC.pos='OFFICE-HALLWAY'
             TC.move=False
         elif TC.pos=='OFFICE-HALLWAY':
@@ -777,10 +1056,12 @@ def ToyChicaAi():
             TC.pos='LEFTVENT'
             TC.move=False
         elif TC.pos=='LEFTVENT':
+            sfx.ventwalk.play()
             TC.pos='OFFICE'
             TC.move=False
         elif TC.pos=='OFFICE' and office.maskTime==0:
             TC.pos='IN-OFFICE'
+            sfx.stare.play()
             office.inside=True
             TC.move=False
 def ToyFreddyAi():
@@ -788,6 +1069,7 @@ def ToyFreddyAi():
     mChance=random.randint(1,20)
     if(TF.ai>=mChance):
         TF.move=True
+        cam.staticTimer=random.randint(60,120)
     else:
         TF.move=False
         
@@ -796,6 +1078,8 @@ def ToyFreddyAi():
             TF.pos='GAMEAREA'
             TF.move=False
         elif TF.pos=='GAMEAREA':
+            if office.hallfull==False:
+                sfx.ambiencescary.play(-1)
             TF.pos='OFFICE-HALL1'
             TF.move=False
         elif TF.pos=='OFFICE-HALL1':
@@ -803,13 +1087,15 @@ def ToyFreddyAi():
             TF.move=False
         elif TF.pos=='OFFICE-HALL2' and player.camsUp==True and office.maskTime==0:
             TF.pos='IN-OFFICE'
-            TF.move=False    
+            TF.move=False
+            sfx.stare.play()
             office.inside=True
 def WitheredBonnieAi():
     
     mChance=random.randint(1,20)
     if(WB.ai>=mChance):
         WB.move=True
+        cam.staticTimer=random.randint(60,120)
     else:
         WB.move=False
         
@@ -818,23 +1104,28 @@ def WitheredBonnieAi():
             WB.pos='MAINHALL'
             WB.move=False
         elif WB.pos=='MAINHALL':
+            if office.hallfull==False:
+                sfx.ambiencescary.play(-1)
             WB.pos='OFFICE-HALL'
             WB.move=False
         elif WB.pos=='OFFICE-HALL':
             WB.pos='PARTYROOM1'
             WB.move=False
         elif WB.pos=='PARTYROOM1':
+            sfx.ventwalk.play()
             WB.pos='LEFTVENT'
             WB.move=False
         elif WB.pos=='LEFTVENT'and office.maskTime==0:
             WB.pos='IN-OFFICE'
             WB.move=False
+            sfx.stare.play()
             office.inside=True
 def WitheredChicaAi():
     
     mChance=random.randint(1,20)
     if(WC.ai>=mChance):
         WC.move=True
+        cam.staticTimer=random.randint(60,120)
     else:
         WC.move=False
         
@@ -846,17 +1137,20 @@ def WitheredChicaAi():
             WC.pos='PARTYROOM2'
             WC.move=False
         elif WC.pos=='PARTYROOM2':
+            sfx.ventwalk.play()
             WC.pos='RIGHTVENT'
             WC.move=False
         elif WC.pos=='RIGHTVENT'and office.maskTime==0:
             WC.pos='IN-OFFICE'
             office.inside=True
+            sfx.stare.play()
             WC.move=False
 def WitheredFreddyAi():
     
     mChance=random.randint(1,20)
     if(WF.ai>=mChance):
         WF.move=True
+        cam.staticTimer=random.randint(60,120)
     else:
         WF.move=False
         
@@ -868,21 +1162,229 @@ def WitheredFreddyAi():
             WF.pos='PARTYROOM3'
             WF.move=False
         elif WF.pos=='PARTYROOM3':
+            if office.hallfull==False:
+                sfx.ambiencescary.play(-1)
             WF.pos='OFFICE-HALL'
             WF.move=False
         elif WF.pos=='OFFICE-HALL' and office.maskTime==0:
             WF.pos='IN-OFFICE'
             office.inside=True
+            sfx.stare.play()
             WF.move=False
-def setupOffice():
+def WitheredFoxyAi():
+    mChance= 21+random.randint(1,5) - WFO.value
+    if(WFO.ai>=mChance):
+        WFO.move=True
+        
+    else:
+        WFO.move=False
+        
+    if WFO.move:
+        if WFO.pos=='P&S':
+            if office.hallfull==False:
+                sfx.ambiencescary.play(-1)
+            WFO.pos='OFFICE-HALL'
+            WFO.attackTimer=50
+            WFO.move=False
+        elif WFO.pos=='OFFICE-HALL':
+            if WFO.attackTimer>0:
+                WFO.pos='P&S'
+                WFO.move=False
+            else:
+                WFO.move=False
+def WitheredFoxyAttack():
+    if WFO.pos=='OFFICE-HALL':
+        WFO.attackTimer-=1
+        
+def BalloonBoyAi():
+    
+    mChance=random.randint(1,20)
+    if(BB.ai>=mChance):
+        BB.move=True
+        cam.staticTimer=random.randint(60,120)
+    else:
+        BB.move=False
+        
+    if BB.move:
+        if BB.pos=='GAMEAREA':
+            BB.pos='N/A-1'
+            BB.move=False
+        elif BB.pos=='N/A-1':
+            BB.pos='N/A-2'
+            BB.move=False
+        elif BB.pos=='N/A-2':
+            BB.pos='N/A-3'
+            BB.move=False
+        elif BB.pos=='N/A-3':
+            BB.pos='LEFTVENT'
+            BB.move=False
+        elif BB.pos=='LEFTVENT':
+            sfx.ventwalk.play()
+            BB.pos='OFFICE'
+            BB.move=False
+        elif BB.pos=='OFFICE' and office.maskTime==0:
+            BB.pos='IN-OFFICE'
+            BB.move=False
+def MangleAi():
+    
+    mChance=random.randint(1,20)
+    if(MA.ai>=mChance):
+        MA.move=True
+        cam.staticTimer=random.randint(60,120)
+    else:
+        MA.move=False
+        
+    if MA.move:
+        if MA.pos=='KIDSCOVE':
+            MA.pos='PRISECOUNTER'
+            MA.move=False
+        elif MA.pos=='PRISECOUNTER':
+            MA.pos='GAMEAREA'
+            MA.move=False
+        elif MA.pos=='GAMEAREA':
+            MA.pos='MAINHALL'
+            MA.move=False
+        elif MA.pos=='MAINHALL':
+            if office.hallfull==False:
+                sfx.ambiencescary.play(-1)
+            MA.pos='OFFICE-HALL'
+            MA.move=False    
+        elif MA.pos=='OFFICE-HALL':
+            MA.pos='PARTYROOM2'
+            MA.move=False
+        elif MA.pos=='PARTYROOM2':
+            MA.pos='RIGHTVENT'
+            MA.move=False
+        elif MA.pos=='RIGHTVENT':
+            sfx.ventwalk.play()
+            MA.pos='OFFICE'
+            MA.move=False
+        elif MA.pos=='OFFICE' and office.maskTime==0:
+            MA.pos='IN-OFFICE'
+            MA.move=False
+def Musicbox():
+    P.timertimer+=1
+    if P.timer>=0 and P.timertimer>=2:
+        if P.recharge==False:
+            P.timer-=P.subtraction
+        elif P.recharge and P.timer<2000:
+            P.timer+=20
+        P.timertimer=0
+    
+    if P.timer<0:
+        P.timer=0
+        P.out=True
+    if P.timer>2000:
+        P.timer=2000
+def PuppetAi():
+    mChance=random.randint(1,20)
+    if(P.ai>=mChance):
+        P.move=True
+    else:
+        P.move=False
+    if P.move:
+        if P.pos=='PRISECOUNTER':
+            P.pos='PRISECOUNTER-1'
+            P.move=False
+        elif P.pos=='PRISECOUNTER-1':
+            P.pos='PRISECOUNTER-2'
+            P.move=False
+        elif P.pos=='PRISECOUNTER-2':
+            P.pos='GAMEAREA'
+            P.move=False
+        elif P.pos=='GAMEAREA':
+            P.pos='MAINHALL'
+            P.move=False
+        elif P.pos=='MAINAHALL':
+            P.pos='PARTYROOM4'
+            P.move=False
+        elif P.pos=='PARTYTROOM4':
+            P.pos='PARTYROOM2'
+            P.move=False
+        elif P.pos=='PARTYROOM2' and office.maskTime==0:
+            P.pos='IN-OFFICE'
+            WF.move=False
+def GoldenFreddyHallAi():
+    chance=random.randint(1,10)
+    if GF.ai>0 and office.side!='FRONT' and player.camsUp:
+        if chance==1 and TC.pos!='OFFICE-HALLWAY' and TF.pos!='OFFICE-HALL1' and TF.pos!='OFFICE-HALL2' and WB.pos!='OFFICE-HALL' and WF.pos!='OFFICE-HALL' and MA.pos!='OFFICE-HALL' and WFO.pos!='OFFICE-HALL':
+            GF.pos='OFFICE-HALL'
+def GoldenFreddyOfficeAi():
+    mChance=random.randint(1,20)
+    if(GF.ai>=mChance):
+        if GF.pos!='OFFICE-HALL' and player.camsUp:
+            GF.pos='IN-OFFICE'
+def setUpSFX():
+    sfx.fansound = pygame.mixer.Sound('fansound.MP3')
+    sfx.ambience2 = pygame.mixer.Sound('ambience2.MP3')
+    sfx.blip = pygame.mixer.Sound('blip3.MP3')
+    sfx.buzzlight = pygame.mixer.Sound('buzzlight.MP3')
+    sfx.call1 = pygame.mixer.Sound('call 1b.MP3')
+    sfx.call2 = pygame.mixer.Sound('call 2b.MP3')
+    sfx.call3 = pygame.mixer.Sound('call 3b.MP3')
+    sfx.call4 = pygame.mixer.Sound('call 4b.MP3')
+    sfx.call5 = pygame.mixer.Sound('call 5b.MP3')
+    sfx.call6 = pygame.mixer.Sound('call 6b.MP3')
+    sfx.clockchimes = pygame.mixer.Sound('Clocks_Chimes_Cl_02480702.MP3')
+    sfx.camBackground = pygame.mixer.Sound('CMPTR_Low_Tech_Stat.MP3')
+    sfx.blip2 = pygame.mixer.Sound('COMPUTER_DIGITAL_L2076605.MP3')
+    sfx.computerIntior = pygame.mixer.Sound('ComputerInteriorLong_EVL02_14.MP3')
+    sfx.children = pygame.mixer.Sound('CROWD_SMALL_CHIL_EC049202.MP3')
+    sfx.maskbreaths = pygame.mixer.Sound('deepbreaths.MP3')
+    sfx.hi = pygame.mixer.Sound('echo1.MP3')
+    sfx.hello = pygame.mixer.Sound('echo3b.MP3')
+    sfx.laugh = pygame.mixer.Sound('echo4b.MP3')
+    sfx.garble = pygame.mixer.Sound('elec garble.MP3')
+    sfx.error = pygame.mixer.Sound('error.MP3')
+    sfx.maskon = pygame.mixer.Sound('FENCING_42_GEN-HDF10953.MP3')
+    sfx.maskoff = pygame.mixer.Sound('FENCING_43_GEN-HDF10954.MP3')
+    sfx.ambience1 = pygame.mixer.Sound('In_The_Depths_C.MP3')
+    sfx.jackinthebox = pygame.mixer.Sound('jackinthebox.MP3')
+    sfx.machineturn = pygame.mixer.Sound('machineturn2.MP3')
+    sfx.metalrun = pygame.mixer.Sound('metalrun.MP3')
+    sfx.metalwalk1 = pygame.mixer.Sound('metalwalk1.MP3')
+    sfx.metalwalk2 = pygame.mixer.Sound('metalwalk2.MP3')
+    sfx.metalwalk2 = pygame.mixer.Sound('metalwalk3.MP3')
+    sfx.musicbox = pygame.mixer.Sound('Music_Box_Melody_Playful.MP3')
+    sfx.musicbox.set_volume(0.3)
+    sfx.musicbox2 = pygame.mixer.Sound('musicbox2.MP3')
+    sfx.pop = pygame.mixer.Sound('pop.MP3')
+    sfx.popstatic = pygame.mixer.Sound('popstatic.MP3')
+    sfx.arr = pygame.mixer.Sound('Robot.MP3')
+    sfx.ambience3 = pygame.mixer.Sound('Scary_Space_B.MP3')
+    sfx.stare = pygame.mixer.Sound('stare.MP3')
+    sfx.death2 = pygame.mixer.Sound('static2.MP3')
+    sfx.staticend = pygame.mixer.Sound('staticend2.MP3')
+    sfx.camup = pygame.mixer.Sound('STEREO_CASSETTE__90097701.MP3')
+    sfx.camdown = pygame.mixer.Sound('STEREO_CASSETTE__90097704.MP3')
+    sfx.menumusic = pygame.mixer.Sound('The_Sand_Temple_Loop_G.MP3')
+    sfx.ventwalk = pygame.mixer.Sound('ventwalk1.MP3')
+    sfx.walk1 = pygame.mixer.Sound('walk1.MP3')
+    sfx.walk2 = pygame.mixer.Sound('walk2.MP3')
+    sfx.walk3 = pygame.mixer.Sound('walk3.MP3')
+    sfx.walk4 = pygame.mixer.Sound('walk4.MP3')
+    sfx.walk5 = pygame.mixer.Sound('walk5.MP3')
+    sfx.windup = pygame.mixer.Sound('windup2.MP3')
+    sfx.ambiencescary = pygame.mixer.Sound('With_S2.MP3')
+    sfx.js1 = pygame.mixer.Sound('Xscream2.MP3')
+    sfx.js2 = pygame.mixer.Sound('Xscream3.MP3')
+
+def setupOfficeInts():
+    global leftOff ,leftOn, rightOff , rightOn ,toybonnie , goldenfreddy , toychica ,  toyfreddy ,blackscreen, maskButton , camButton ,nightText , amText , flashlightText, mask1 , mask2 , mask3 , mask4 , mask5 , mask6 , mask7 , mask8 , mask9 ,mask10 ,desk1 , desk2 , desk3 , desk4
     
     office.image = officeImages['ONN']
     office.rect = office.image.get_rect()
     office.rect.y = 0
     office.rect.x = 0
     office.dx=0
-def setupOfficeInts():
-    global leftOff ,leftOn, rightOff , rightOn ,toybonnie , toychica ,  toyfreddy ,blackscreen, maskButton , camButton ,nightText , amText , flashlightText, mask1 , mask2 , mask3 , mask4 , mask5 , mask6 , mask7 , mask8 , mask9 ,mask10 ,desk1 , desk2 , desk3 , desk4
+    office.side='NONE' #Which was the camera is turning(helps keeps objects in sync when moving)
+    office.light='NONE' #Current light that is on , only one can be on at a time. The states it can be are 'NONE' , 'LEFT' , 'RIGHT' , 'FRONT'
+    office.deskFrame=0 #Frame number for desk animation
+    office.maskFrame=0 #Frame number for mask animation
+    office.inside=False #if an animatronic is inside the office , helps with use of mask and killing of the player
+    office.maskTime=0 #timer for how long the mask needs to be on when an animatronic is in the room
+    office.hallfull=False #if any animatroinics are in the hallway
+    office.maskTimer=50 #Timer for how fast you need to put the mask on when an animatronic enters the room
     
     #light buttons
     leftOff=pygame.sprite.Sprite(officeInts)
@@ -964,6 +1466,13 @@ def setupOfficeInts():
     monitor.rect.x=0
     monitor.rect.y=HEIGHT/-7.2
     
+    goldenfreddy=pygame.sprite.Sprite(officeInts)
+    goldenfreddy.image=animatronicImages['ANIM-GF/OFFICE']
+    goldenfreddy.rect=goldenfreddy.image.get_rect()
+    goldenfreddy.rect.x=400
+    goldenfreddy.rect.y=390
+    goldenfreddy.dx=0
+    
     #Toy bonnie cutout
     toybonnie=pygame.sprite.Sprite(officeInts)
     toybonnie.image=animatronicImages['ANIM-TB/OFFICE']
@@ -1024,12 +1533,17 @@ def setupOfficeInts():
     desk4.dx=0
     
 def setupCams():
-    global camMap , camOutline , camDot ,musicButtonOff , textWindUp , textClick , cambox1 , cambox2 , cambox3 , cambox4 , cambox5 , cambox6 , cambox7 , cambox8 ,cambox9 , cambox10 , cambox11 , cambox12 , Text01 , Text02 , Text03 , Text04 , Text05 , Text06 , Text06 , Text07 , Text08 , Text09 , Text10 , Text11 , Text12 , camGbox
+    global camMap , camOutline , camDot , manglePC , mangleGA , mangleMH , mangleP2 , mangleO , musicButtonOff , musicButtonOn , textWindUp , textClick , cambox1 , cambox2 , cambox3 , cambox4 , cambox5 , cambox6 , cambox7 , cambox8 ,cambox9 , cambox10 , cambox11 , cambox12 , Text01 , Text02 , Text03 , Text04 , Text05 , Text06 , Text06 , Text07 , Text08 , Text09 , Text10 , Text11 , Text12 , camGbox
     cam.image=camImages['SHOWSTAGE-FULL/N']
     cam.rect=cam.image.get_rect()
     cam.rect.x=0
     cam.rect.y=0
     cam.dx=3
+    cam.move='LEFT' #which way the camera is moving
+    cam.flash=False #if the flashlight is on in cameras
+    cam.moveTimer=0 #timer for the movement of animatronics
+    cam.puppetMoveTimer=0
+    cam.staticTimer=0 #timer for camrea static when animatronics move
     
     textCam.image=camUIImages['TEXT-SHOWSTAGE']
     textCam.rect=textCam.image.get_rect()
@@ -1216,6 +1730,12 @@ def setupCams():
     musicButtonOff.rect.x=WIDTH/3.2
     musicButtonOff.rect.y=HEIGHT/1.384
     
+    musicButtonOn=pygame.sprite.Sprite(camUI)
+    musicButtonOn.image=camUIImages['CAM-MUSICBUTTON_GREEN']
+    musicButtonOn.rect=musicButtonOn.image.get_rect()
+    musicButtonOn.rect.x=WIDTH/3.2
+    musicButtonOn.rect.y=HEIGHT/1.384
+    
     textWindUp=pygame.sprite.Sprite(camUI)
     textWindUp.image=camUIImages['TEXT-WIND/UP/MUSICBOX']
     textWindUp.rect=textWindUp.image.get_rect()
@@ -1237,6 +1757,137 @@ def setupCams():
     white.rect=white.image.get_rect()
     white.rect.x=0
     white.rect.y=0
+    
+    manglePC=pygame.sprite.Sprite(camUI)
+    manglePC.image=animatronicImages['MANGLE-PRISECOUNTER']
+    manglePC.rect=manglePC.image.get_rect()
+    manglePC.rect.x=1100
+    manglePC.rect.y=0
+    
+    mangleGA=pygame.sprite.Sprite(camUI)
+    mangleGA.image=animatronicImages['MANGLE-GAMEAREA']
+    mangleGA.rect=mangleGA.image.get_rect()
+    mangleGA.rect.x=0
+    mangleGA.rect.y=0
+    
+    mangleMH=pygame.sprite.Sprite(camUI)
+    mangleMH.image=animatronicImages['MANGLE-MAINHALL']
+    mangleMH.rect=mangleMH.image.get_rect()
+    mangleMH.rect.x=1100
+    mangleMH.rect.y=636
+    
+    mangleP2=pygame.sprite.Sprite(camUI)
+    mangleP2.image=animatronicImages['MANGLE-PARTYROOM2']
+    mangleP2.rect=mangleP2.image.get_rect()
+    mangleP2.rect.x=0
+    mangleP2.rect.y=300
+    
+    mangleO=pygame.sprite.Sprite(camUI)
+    mangleO.image=animatronicImages['MANGLE-OFFICE']
+    mangleO.rect=mangleO.image.get_rect()
+    mangleO.rect.x=1100
+    mangleO.rect.y=0
+    mangleO.dx=0
+    
+    
+    
+def setUpAnimatronics():
+    global TB , TC , TF , WB , WC , WF , WFO , MA , GF , BB , P
+        #ANIMATRONICS
+    #TOYBONNIE
+    TB=pygame.sprite.Sprite() 
+    TB.ai=10 #ai level
+    TB.pos='SHOWSTAGE' #current location
+    TB.move=False #if movechance alows it to move
+    TB.attack=False #if they attack the player
+    TB.frame=0 #frame for jumpscare
+    TB.image=animatronicImages['ANIM-TB_JS1']
+    TB.rect=TB.image.get_rect()
+    TB.rect.x=0
+    TB.rect.y=0
+    
+    #TOY CHICA
+    TC=pygame.sprite.Sprite() 
+    TC.ai=0
+    TC.pos='SHOWSTAGE' 
+    TC.move=False
+    TC.attack=False
+    TC.frame=0
+    #TOY FREDDY
+    TF=pygame.sprite.Sprite() 
+    TF.ai=0 
+    TF.pos='SHOWSTAGE' 
+    TF.move=False
+    TF.attack=False
+    TF.frame=0
+    #WITHERED BONNIE
+    WB=pygame.sprite.Sprite() 
+    WB.ai=0
+    WB.pos='P&S' 
+    WB.move=False
+    WB.attack=False
+    WB.frame=0
+    #WITHERED CHICA
+    WC=pygame.sprite.Sprite() 
+    WC.ai=0
+    WC.pos='P&S' 
+    WC.move=False
+    WC.attack=False
+    WC.frame=0
+    #WITHERED FREDDY
+    WF=pygame.sprite.Sprite() 
+    WF.ai=0
+    WF.pos='P&S' 
+    WF.move=False
+    WF.attack=False
+    WF.frame=0
+    #WITHERED FOXY
+    WFO=pygame.sprite.Sprite() 
+    WFO.ai=0
+    WFO.pos='P&S' 
+    WFO.move=False
+    WFO.valueTimer=0
+    WFO.value=0
+    WFO.attackTimer=0
+    WFO.attack=False
+    WFO.frame=0
+    #BALLOON BOY
+    BB=pygame.sprite.Sprite() 
+    BB.ai=0
+    BB.pos='GAMEAREA' 
+    BB.move=False
+    BB.timer=0
+    #GOLDEN FREDDY
+    GF=pygame.sprite.Sprite() 
+    GF.ai=0
+    GF.pos='N/A' 
+    GF.timer=0 #timer for his hallway ai
+    GF.value=0 #value which helps determine if he kills you when hes in the hall
+    GF.increase=False #if the value is increasing
+    GF.seen=False #if you have seen him in the office/hall
+    GF.attack=False
+    GF.frame=0
+    #MANGLE
+    MA=pygame.sprite.Sprite() 
+    MA.ai=0
+    MA.pos='KIDSCOVE' 
+    MA.move=False
+    MA.timer=0 #timer for how long its in office before it kills you
+    MA.attack=False
+    MA.frame=0
+    #PUPPET
+    P=pygame.sprite.Sprite() 
+    P.ai=0
+    P.timertimer=0 #second timer for music box
+    P.timer=2000 #Music box Timer
+    P.subtraction=4 #the subtraction of time from the music box
+    P.recharge=False #if the music box it being recharged or not
+    P.move=False #if the puppet is moving 
+    P.pos='PRISECOUNTER' # the pos of the puppet if out of the box
+    P.out=False #if the puppet is out of the box
+    P.attack=False
+    P.frame=0
+    
     
 def loadOffice():
     global officeImages
@@ -1344,7 +1995,6 @@ def loadOfficeDesk():
     officeDeskImages['DESK-F2']=pygame.transform.scale(sheet.image_at((9,462,851,435), colorkey =(11,11,11)), (WIDTH/1.84*1.1618,HEIGHT/2.026))
     officeDeskImages['DESK-F3']=pygame.transform.scale(sheet.image_at((884,12,851,435), colorkey =(11,11,11)), (WIDTH/1.84*1.1618,HEIGHT/2.026))
     officeDeskImages['DESK-F4']=pygame.transform.scale(sheet.image_at((886,463,851,435), colorkey =(11,11,11)), (WIDTH/1.84*1.1618,HEIGHT/2.026))
-    
 def loadShowStageCam():
     global camImages
     
@@ -1573,18 +2223,170 @@ def loadToyBonnie():
     animatronicImages={}
     animatronicImages['ANIM-TB/OFFICE']=pygame.transform.scale(sheet.image_at((1026,4615,645,895), colorkey =(10,10,0)), (WIDTH/2.105,HEIGHT/.853))
     animatronicImages['ANIM-BLACKSCREEN']=pygame.transform.scale(sheet.image_at((1265,5168,1,1), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS7']=pygame.transform.scale(sheet.image_at((1,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS8']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS9']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS10']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS11']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS12']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TB_JS13']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
     
 def loadToyChica():
 
     sheet=Spritesheet('ToyChica-SS.png')
     
     animatronicImages['ANIM-TC/OFFICE']=pygame.transform.scale(sheet.image_at((1026,4615,645,895), colorkey =(10,10,0)), (WIDTH/2.105,HEIGHT/.853))
+    animatronicImages['ANIM-TC_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS7']=pygame.transform.scale(sheet.image_at((1,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS8']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS9']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS10']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS11']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS12']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TC_JS13']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+
 def loadToyFreddy():
     
     sheet=Spritesheet('ToyFreddy-SS.png')
     
     animatronicImages['ANIM-TF/OFFICE']=pygame.transform.scale(sheet.image_at((1,4615,391,576), colorkey =(10,10,0)), (WIDTH/3.106,HEIGHT/1.146))
-
+    animatronicImages['ANIM-TF_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS7']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS8']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS9']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS10']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS11']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-TF_JS12']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+def loadWitheredBonnie():
+    sheet=Spritesheet('WitheredBonnie-SS.png')
+    
+    animatronicImages['ANIM-WB_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS7']=pygame.transform.scale(sheet.image_at((1,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS8']=pygame.transform.scale(sheet.image_at((1,5384,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS9']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS10']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS11']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS12']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS13']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS14']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS15']=pygame.transform.scale(sheet.image_at((1026,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WB_JS16']=pygame.transform.scale(sheet.image_at((1026,5384,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    
+def loadWitheredChica():
+    sheet=Spritesheet('WitheredChica-SS.png')
+    
+    animatronicImages['ANIM-WC_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS7']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS8']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS9']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS10']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS11']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WC_JS12']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+def loadWitheredFreddy():
+    sheet=Spritesheet('WitheredFreddy-SS.png')
+    
+    animatronicImages['ANIM-WF_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS7']=pygame.transform.scale(sheet.image_at((1,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS8']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS9']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS10']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS11']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS12']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WF_JS13']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+def loadWitheredFoxy():
+    sheet=Spritesheet('WitheredFoxy-SS.png')
+    
+    animatronicImages['ANIM-WFO_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS7']=pygame.transform.scale(sheet.image_at((1,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS8']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS9']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS10']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS11']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS12']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS13']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-WFO_JS14']=pygame.transform.scale(sheet.image_at((1026,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    
+def loadMangle():
+    sheet=Spritesheet('Mangle-SS.png')
+    
+    animatronicImages['MANGLE-PRISECOUNTER']=pygame.transform.scale(sheet.image_at((346,5,899,389), colorkey =(10,10,0)), (1271,550))
+    animatronicImages['MANGLE-GAMEAREA']=pygame.transform.scale(sheet.image_at((347,403,606,398), colorkey =(10,10,0)), (857,563))
+    animatronicImages['MANGLE-MAINHALL']=pygame.transform.scale(sheet.image_at((4,810,750,313), colorkey =(10,10,0)), (1061,443))
+    animatronicImages['MANGLE-PARTYROOM2']=pygame.transform.scale(sheet.image_at((5,5,332,591), colorkey =(10,10,0)), (470,836))
+    animatronicImages['MANGLE-OFFICE']=pygame.transform.scale(sheet.image_at((965,404,486,191), colorkey =(10,10,0)), (687,270))
+def loadPuppet():
+    sheet=Spritesheet('Puppet-SS.png')
+    
+    animatronicImages['ANIM-P_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS7']=pygame.transform.scale(sheet.image_at((1,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS8']=pygame.transform.scale(sheet.image_at((1,5384,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS9']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS10']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS11']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS12']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS13']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS14']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS15']=pygame.transform.scale(sheet.image_at((1026,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-P_JS16']=pygame.transform.scale(sheet.image_at((1026,5384,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+def loadGoldenFreddy():
+    
+    sheet=Spritesheet('GoldenFreddy-SS.png')
+    
+    animatronicImages['ANIM-GF/OFFICE']=pygame.transform.scale(sheet.image_at((1026,4615,379,379), colorkey =(10,10,0)), (700,700))
+    animatronicImages['ANIM-GF_JS1']=pygame.transform.scale(sheet.image_at((1,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS2']=pygame.transform.scale(sheet.image_at((1,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS3']=pygame.transform.scale(sheet.image_at((1,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS4']=pygame.transform.scale(sheet.image_at((1,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS5']=pygame.transform.scale(sheet.image_at((1,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS6']=pygame.transform.scale(sheet.image_at((1,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS7']=pygame.transform.scale(sheet.image_at((1,4615,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS8']=pygame.transform.scale(sheet.image_at((1026,1,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS9']=pygame.transform.scale(sheet.image_at((1026,770,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS10']=pygame.transform.scale(sheet.image_at((1026,1539,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS11']=pygame.transform.scale(sheet.image_at((1026,2308,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS12']=pygame.transform.scale(sheet.image_at((1026,3077,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
+    animatronicImages['ANIM-GF_JS13']=pygame.transform.scale(sheet.image_at((1026,3846,1024,768), colorkey =(10,10,0)), (WIDTH,HEIGHT))
 def mainloop():
     running = True
     clock = pygame.time.Clock()
@@ -1630,7 +2432,15 @@ loadOverlays()
 loadToyBonnie()
 loadToyChica()
 loadToyFreddy()
-setupOffice()
+loadWitheredBonnie()
+loadWitheredChica()
+loadWitheredFreddy()
+loadWitheredFoxy()
+loadPuppet()
+loadMangle()
+loadGoldenFreddy()
+setUpSFX()
+setUpAnimatronics()
 setupOfficeInts()
 setupCams()
 mainloop()
